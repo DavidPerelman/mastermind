@@ -29,6 +29,7 @@ function applyPegColor(elem, colorId) {
 // ── Shared board-row builder ──────────────────────────────────────
 // options: { empty, active, completed, winning, animate, selectedSlot, onSlotClick }
 function buildRow(num, guessArr, feedback, options = {}) {
+  const codeLen = settings.config.codeLength;
   const row = el('div', 'board-row');
   if (options.empty)     row.classList.add('empty');
   if (options.active)    row.classList.add('active');
@@ -38,8 +39,13 @@ function buildRow(num, guessArr, feedback, options = {}) {
 
   const numEl = el('span', 'row-num');
   numEl.textContent = num ?? '';
+
+  // Feedback dots — 2 columns for 4-peg codes, 3 columns for 5-peg codes
   const fbArea = el('div', 'feedback-area');
-  for (let i = 0; i < CODE_LENGTH; i++) {
+  const fbCols = codeLen <= 4 ? 2 : 3;
+  fbArea.style.gridTemplateColumns = `repeat(${fbCols}, 8px)`;
+  fbArea.style.width = fbCols === 2 ? '18px' : '30px';
+  for (let i = 0; i < codeLen; i++) {
     const dot = el('div', 'fdot');
     if (feedback) {
       if (i < feedback.blacks)                        dot.classList.add('black');
@@ -52,7 +58,7 @@ function buildRow(num, guessArr, feedback, options = {}) {
   row.appendChild(numEl);
 
   const pegsArea = el('div', 'pegs-area');
-  for (let i = 0; i < CODE_LENGTH; i++) {
+  for (let i = 0; i < codeLen; i++) {
     const slot = el('div', 'peg-slot', 'sm');
     if (options.active) {
       if (i === options.selectedSlot) slot.classList.add('selected');
@@ -66,22 +72,29 @@ function buildRow(num, guessArr, feedback, options = {}) {
   return row;
 }
 
+// ── Board width calculator ────────────────────────────────────────
+// Row layout (LTR): [fbArea] gap [rowNum 18px] gap [pegsArea]
+//   fbArea  = 2-col (18px) for ≤4 pegs, 3-col (30px) for ≥5 pegs
+//   pegsArea = n*44px pegs + (n-1)*6px gaps
+//   row padding: 6px each side = 12px; gaps between 3 items: 2*6px = 12px
+//   board padding: 12px each side = 24px
+function calcBoardWidth(codeLen) {
+  const fbWidth  = codeLen <= 4 ? 18 : 30;
+  const pegsW    = codeLen * 44 + (codeLen - 1) * 6;
+  const rowW     = fbWidth + 18 + pegsW + 12 /* row gaps */ + 12 /* row pad */;
+  return rowW + 24 /* board pad */ + 4 /* buffer */;
+}
+
 // ── Palette helper ────────────────────────────────────────────────
-// usedColors: array of colorIds already placed (grayed out when allowRepeats=false)
-function renderPalette(containerId, onPick, usedColors = []) {
+function renderPalette(containerId, onPick) {
   const container = $(containerId);
   container.innerHTML = '';
-  for (const c of COLORS) {
+  for (const c of settings.config.colors) {
     const btn = el('div', 'color-btn');
     btn.style.backgroundColor = c.hex;
     btn.style.boxShadow = `0 2px 14px ${c.hex}44`;
     btn.setAttribute('aria-label', c.label);
-    const isDisabled = !settings.allowRepeats && usedColors.includes(c.id);
-    if (isDisabled) {
-      btn.classList.add('disabled');
-    } else {
-      btn.addEventListener('click', () => onPick(c.id));
-    }
+    btn.addEventListener('click', () => onPick(c.id));
     container.appendChild(btn);
   }
 }
@@ -89,9 +102,19 @@ function renderPalette(containerId, onPick, usedColors = []) {
 // ════════════════════════════════════════════════════════════════
 // SETTINGS — shown before every game start
 // ════════════════════════════════════════════════════════════════
+const DIFFICULTIES = [
+  { id: 'easy',   label: 'קל',     codeLength: 4, colorCount: 6 },
+  { id: 'medium', label: 'בינוני', codeLength: 6, colorCount: 8 },
+  { id: 'hard',   label: 'קשה',    codeLength: 5, colorCount: 8 },
+];
+
 const settings = {
-  allowRepeats: true,
-  pendingMode:  null,   // 'A' or 'B' — which mode to start after settings
+  difficulty:  'easy',
+  pendingMode: null,
+  get config() {
+    const d = DIFFICULTIES.find(d => d.id === this.difficulty);
+    return { codeLength: d.codeLength, colors: COLORS.slice(0, d.colorCount) };
+  },
 };
 
 $('btn-mode-a').addEventListener('click', () => {
@@ -103,15 +126,12 @@ $('btn-mode-b').addEventListener('click', () => {
   showScreen('screen-settings');
 });
 
-$('opt-yes').addEventListener('click', () => {
-  settings.allowRepeats = true;
-  $('opt-yes').classList.add('selected');
-  $('opt-no').classList.remove('selected');
-});
-$('opt-no').addEventListener('click', () => {
-  settings.allowRepeats = false;
-  $('opt-no').classList.add('selected');
-  $('opt-yes').classList.remove('selected');
+['easy', 'medium', 'hard'].forEach(id => {
+  $(`opt-${id}`).addEventListener('click', () => {
+    settings.difficulty = id;
+    document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+    $(`opt-${id}`).classList.add('selected');
+  });
 });
 
 $('btn-start-game').addEventListener('click', () => {
@@ -127,9 +147,11 @@ $('back-settings').addEventListener('click', () => showScreen('screen-home'));
 let setupCode = [];
 
 function goToSetup() {
-  setupCode = Array(CODE_LENGTH).fill(null);
+  const { codeLength } = settings.config;
+  setupCode = Array(codeLength).fill(null);
+  $('setup-hint').textContent = `בחר ${codeLength} צבעים — רק אתה יודע את הקוד`;
   renderSetupSlots();
-  renderPalette('setup-palette', onSetupColorPick, []);
+  renderPalette('setup-palette', onSetupColorPick);
   $('btn-ready').disabled = true;
   showScreen('screen-setup');
 }
@@ -137,14 +159,13 @@ function goToSetup() {
 function renderSetupSlots() {
   const container = $('setup-slots');
   container.innerHTML = '';
-  for (let i = 0; i < CODE_LENGTH; i++) {
+  for (let i = 0; i < setupCode.length; i++) {
     const slot = el('div', 'peg-slot');
     applyPegColor(slot, setupCode[i]);
     slot.addEventListener('click', () => {
       if (setupCode[i] === null) return;
       setupCode[i] = null;
       renderSetupSlots();
-      renderPalette('setup-palette', onSetupColorPick, setupCode.filter(Boolean));
       $('btn-ready').disabled = setupCode.includes(null);
     });
     container.appendChild(slot);
@@ -156,7 +177,6 @@ function onSetupColorPick(colorId) {
   if (idx === -1) return;
   setupCode[idx] = colorId;
   renderSetupSlots();
-  renderPalette('setup-palette', onSetupColorPick, setupCode.filter(Boolean));
   $('btn-ready').disabled = setupCode.includes(null);
 }
 
@@ -174,15 +194,17 @@ let G = {};
 // MODE A — Player guesses the computer's secret code
 // ════════════════════════════════════════════════════════════════
 function startModeA() {
+  const cfg = settings.config;
   G = {
-    mode:    'A',
-    secret:  generateRandomCode(settings.allowRepeats),
-    attempt: 0,
-    history: [],
-    guess:   Array(CODE_LENGTH).fill(null),
+    mode:     'A',
+    secret:   generateRandomCode(cfg),
+    attempt:  0,
+    history:  [],
+    guess:    Array(cfg.codeLength).fill(null),
     selected: 0,
-    over:    false,
+    over:     false,
   };
+  $('board-a').style.maxWidth = calcBoardWidth(cfg.codeLength) + 'px';
   renderBoardA();
   refreshPaletteA();
   updateCounterA();
@@ -194,39 +216,34 @@ function updateCounterA() {
   $('counter-a').textContent = `ניסיון ${G.attempt + 1} מתוך ${MAX_GUESSES}`;
 }
 
-// Re-render palette reflecting currently placed colours (for no-repeat mode)
 function refreshPaletteA() {
-  const used = G.guess.filter(c => c !== null);
-  renderPalette('palette-a', onModeAColorPick, used);
+  renderPalette('palette-a', onModeAColorPick);
 }
 
 function renderBoardA() {
   const board = $('board-a');
+  const codeLen = settings.config.codeLength;
   board.innerHTML = '';
 
-  // Future empty rows at top
   const futureCount = MAX_GUESSES - G.attempt - (G.over ? 0 : 1);
   for (let i = 0; i < futureCount; i++) {
     board.appendChild(buildRow(null, null, null, { empty: true }));
   }
 
-  // Completed rows (oldest first → newest just above active)
   for (let i = 0; i < G.attempt; i++) {
     const { guess, feedback } = G.history[i];
     board.appendChild(buildRow(i + 1, guess, feedback, {
       completed: true,
-      winning:   feedback.blacks === CODE_LENGTH,
+      winning:   feedback.blacks === codeLen,
       animate:   i === G.attempt - 1,
     }));
   }
 
-  // Active row at bottom
   if (!G.over) {
     board.appendChild(buildRow(G.attempt + 1, G.guess, null, {
-      active:      true,
+      active:       true,
       selectedSlot: G.selected,
       onSlotClick:  i => {
-        // Tapping a filled slot clears it; tapping any slot selects it
         if (G.guess[i] !== null) {
           G.guess[i] = null;
           $('btn-submit-a').disabled = true;
@@ -243,17 +260,15 @@ function renderBoardA() {
 
 function onModeAColorPick(colorId) {
   if (G.over) return;
-  // In no-repeat mode, skip if this colour is already placed
-  if (!settings.allowRepeats && G.guess.includes(colorId)) return;
   G.guess[G.selected] = colorId;
 
-  // Auto-advance selection to the next empty slot
+  const codeLen = settings.config.codeLength;
   const nextEmpty = G.guess.findIndex((c, i) => i > G.selected && c === null);
   if (nextEmpty !== -1) {
     G.selected = nextEmpty;
   } else {
     const anyEmpty = G.guess.indexOf(null);
-    G.selected = anyEmpty !== -1 ? anyEmpty : Math.min(G.selected + 1, CODE_LENGTH - 1);
+    G.selected = anyEmpty !== -1 ? anyEmpty : Math.min(G.selected + 1, codeLen - 1);
   }
 
   renderBoardA();
@@ -272,7 +287,8 @@ function submitGuessA() {
   G.history.push({ guess, feedback });
   G.attempt++;
 
-  const won  = feedback.blacks === CODE_LENGTH;
+  const codeLen = settings.config.codeLength;
+  const won  = feedback.blacks === codeLen;
   const lost = !won && G.attempt >= MAX_GUESSES;
 
   if (won || lost) {
@@ -280,7 +296,7 @@ function submitGuessA() {
     renderBoardA();
     setTimeout(() => showResultA(won), 700);
   } else {
-    G.guess    = Array(CODE_LENGTH).fill(null);
+    G.guess    = Array(codeLen).fill(null);
     G.selected = 0;
     updateCounterA();
     renderBoardA();
@@ -326,7 +342,7 @@ function startModeB(playerSecret) {
     mode:         'B',
     attempt:      0,
     history:      [],
-    ai:           new MastermindAI(settings.allowRepeats),
+    ai:           new MastermindAI(settings.config),
     currentGuess: null,
     blackInput:   0,
     whiteInput:   0,
@@ -334,6 +350,7 @@ function startModeB(playerSecret) {
     _secret:      playerSecret,
   };
 
+  $('board-b').style.maxWidth = calcBoardWidth(settings.config.codeLength) + 'px';
   renderBoardB();
   updateCounterB();
   renderPlayerSecret(playerSecret);
@@ -346,7 +363,6 @@ function startModeB(playerSecret) {
   scheduleComputerGuess();
 }
 
-// Render the player's secret code in the persistent display strip
 function renderPlayerSecret(code) {
   const container = $('player-secret-pegs');
   container.innerHTML = '';
@@ -363,6 +379,7 @@ function updateCounterB() {
 
 function renderBoardB() {
   const board = $('board-b');
+  const codeLen = settings.config.codeLength;
   board.innerHTML = '';
 
   const emptyCount = MAX_GUESSES - G.attempt;
@@ -374,7 +391,7 @@ function renderBoardB() {
     const { guess, feedback } = G.history[i];
     board.appendChild(buildRow(i + 1, guess, feedback, {
       completed: true,
-      winning:   feedback.blacks === CODE_LENGTH,
+      winning:   feedback.blacks === codeLen,
       animate:   i === G.attempt - 1,
     }));
   }
@@ -410,7 +427,6 @@ function makeComputerGuess() {
   hideBPanel('thinking-area');
   showBPanel('computer-guess-area');
   resetFeedbackInput();
-  // Show secret + feedback controls together so player can compare
   showBPanel('player-secret-row');
   showBPanel('feedback-controls');
 }
@@ -427,7 +443,7 @@ $('black-minus').addEventListener('click', () => {
   if (G.blackInput > 0) { G.blackInput--; $('black-val').textContent = G.blackInput; }
 });
 $('black-plus').addEventListener('click', () => {
-  if (G.blackInput + G.whiteInput < CODE_LENGTH) {
+  if (G.blackInput + G.whiteInput < settings.config.codeLength) {
     G.blackInput++;
     $('black-val').textContent = G.blackInput;
   }
@@ -436,7 +452,7 @@ $('white-minus').addEventListener('click', () => {
   if (G.whiteInput > 0) { G.whiteInput--; $('white-val').textContent = G.whiteInput; }
 });
 $('white-plus').addEventListener('click', () => {
-  if (G.whiteInput + G.blackInput < CODE_LENGTH) {
+  if (G.whiteInput + G.blackInput < settings.config.codeLength) {
     G.whiteInput++;
     $('white-val').textContent = G.whiteInput;
   }
@@ -448,9 +464,10 @@ $('back-game-b').addEventListener('click', () => showScreen('screen-home'));
 function confirmFeedback() {
   if (!G.currentGuess || G.over) return;
 
-  const blacks = G.blackInput;
-  const whites = G.whiteInput;
-  const guess  = [...G.currentGuess];
+  const blacks  = G.blackInput;
+  const whites  = G.whiteInput;
+  const guess   = [...G.currentGuess];
+  const codeLen = settings.config.codeLength;
 
   G.history.push({ guess, feedback: { blacks, whites } });
   G.ai.update(guess, blacks, whites);
@@ -461,7 +478,7 @@ function confirmFeedback() {
   hideBPanel('player-secret-row');
   G.currentGuess = null;
 
-  if (blacks === CODE_LENGTH) {
+  if (blacks === codeLen) {
     G.over = true;
     renderBoardB();
     setTimeout(() => showResultB(false), 700);

@@ -323,7 +323,7 @@ button { font-family: inherit; }
 }
 .counter { font-size: .9rem; color: var(--muted); font-weight: 500; }
 
-/* Board: scrollable glass panel */
+/* Board: scrollable glass panel — max-width set dynamically in JS per codeLength */
 .board {
   flex: 1;
   min-height: 0;
@@ -333,7 +333,6 @@ button { font-family: inherit; }
   gap: 4px;
   padding: 10px 12px;
   background: rgba(255, 255, 255, 0.025);
-  max-width: 320px;
   width: 100%;
   align-self: center;
 }
