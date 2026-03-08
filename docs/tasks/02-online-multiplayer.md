@@ -2,84 +2,115 @@
 
 ## ⚠️ DO NOT START until Phase 1 is complete and confirmed working.
 
-## Key Insight
+## Goal
+Real-time turn-based multiplayer. Two players on different devices,
+connected via a shared 4-digit room code.
 
-Phase 2 is the same mechanic as Phase 1 Mode B — just replace the AI with a human on another device.
+---
 
-- Each player sets a secret code that only they can see
-- Each player guesses the opponent's code
-- Each player manually gives feedback on the opponent's guesses (because only they know their own code)
-- The server never needs to calculate feedback — players do it themselves
+## Game Flow
+
+### Setup
+1. Player 1 creates a room → selects difficulty + guess limit setting
+2. Player 2 joins via room code
+3. Each player sets their own secret code privately (never leaves their device)
+4. Both tap "אני מוכן" → game starts when both are ready
+
+### Turn Structure
+- Players alternate turns. Player 1 goes first.
+- Each turn = one guess by the active player
+- After the guess: the OTHER player (who owns the code) sees it and inputs feedback (בולים/פגיעות)
+- After feedback is confirmed → turn passes to the other player
+- Each player always sees:
+  - Their own guess history + feedback received
+  - How many guesses the opponent has made (not what they guessed)
+
+### Win Condition
+- A player cracks the code (all blacks) → declared winner immediately
+- The other player continues guessing until they also crack it (or hit the limit)
+- Final result shows: who won, how many guesses each used
+
+### Guess Limit (configured by Player 1 in settings)
+- **ללא הגבלה** (default): 10 guesses, then +1 extra guess each time they fail
+- **הגבלה קשיחה**: Player 1 sets a number (e.g. 8). If a player reaches the limit without cracking → they lose. Game ends when both have finished (won or lost).
+
+---
 
 ## Architecture
-
 - `server.js` — Node.js + Socket.io
-- Each player connects from their own device
-- Secret codes are NEVER sent to the server or the opponent
-- Feedback is calculated client-side by the code owner and sent to the server, then forwarded to the guesser
-
-## Flow
-
-1. Player 1 opens app → taps "צור חדר" → gets a 4-digit room code
-2. Player 2 opens app on their device → taps "הצטרף לחדר" → enters code
-3. Both see: "שחקן 2 הצטרף — מתחילים!"
-4. Each player sets their secret code privately on their own device (never leaves the device)
-5. Both players guess simultaneously at their own pace:
-   - Player A sends a guess → Player B sees it, inputs black/white feedback → sends feedback back
-   - Player B sends a guess → Player A sees it, inputs black/white feedback → sends feedback back
-6. When a player's guess gets 5 black pegs → that player wins
-7. Result screen shows on both devices
-
-## Two Simultaneous Flows Per Player
-
-Each player is doing two things at the same time:
-
-- **Guesser role:** submitting guesses against the opponent's code, receiving feedback
-- **Code owner role:** receiving opponent's guesses, inputting feedback (same UI as Phase 1 Mode B)
-
-The UI should make both roles clear — perhaps two panels or tabs.
+- Secret codes stored CLIENT-SIDE only — never sent to server
+- Server manages: room state, whose turn it is, guess routing, feedback routing
 
 ## Socket Events
-
-- `create-room` → server creates room, returns 4-digit code
-- `join-room(code)` → server confirms both players connected
-- `player-ready` → sent when player has set their code (server waits for both before starting)
+- `create-room({ difficulty, limitType, limitCount })` → server returns 4-digit code
+- `join-room(code)` → server confirms, notifies Player 1
+- `player-ready` → sent when player has set their secret code (server waits for both)
 - `submit-guess(guess)` → server forwards guess to opponent (the code owner)
-- `submit-feedback(blackPegs, whitePegs)` → code owner sends feedback → server forwards to guesser
-- `opponent-guess-count(n)` → server broadcasts how many guesses opponent has used (not the guesses themselves)
-- `game-over(result)` → server broadcasts winner and final stats
+- `submit-feedback(blacks, whites)` → opponent confirms feedback → server forwards to guesser + advances turn
+- `opponent-guess-count(n)` → broadcast after each turn (count only, not content)
+- `player-won(playerId, guessCount)` → server broadcasts when a player cracks the code
+- `game-over({ p1: { won, guesses }, p2: { won, guesses } })` → when both players finished
+- `opponent-disconnected` → server notifies remaining player → they win
 
-## Security
+---
 
-- Secret codes stored on client only — never sent anywhere
-- Server only routes guesses and feedback between players
-- Room auto-closes after game ends or 30 min inactivity
+## Screens
 
-## UI Additions
+### Home screen
+Add a third button below existing two:
+- "שחק נגד חבר 👥"
 
-- Home screen: add "צור חדר" / "הצטרף לחדר" buttons
-- Waiting screen: "ממתין לשחקן השני..."
-- In-game: show opponent's guess count progress (not their actual guesses)
-- Disconnection message: "השחקן השני התנתק"
+### Room screen (new)
+Two options:
+- **"צור חדר חדש"** → difficulty selector + guess limit setting → show 4-digit code + "ממתין לשחקן השני..."
+- **"הצטרף לחדר"** → 4-digit input field + "הצטרף" button
+
+Guess limit setting (shown when creating):
+- Toggle: "ללא הגבלה" / "הגבלת ניחושים"
+- If limited: number input (default 10)
+
+### Waiting screen
+"ממתין לשחקן השני..." with animated dots
+
+### Setup screen (same as Phase 1 Mode B)
+Each player sets their secret code privately → "אני מוכן"
+
+### Game screen (multiplayer)
+**My turn (active):**
+- My guess board (history + active row + palette)
+- "תורך לנחש!" indicator
+- Opponent's guess count: "היריב ניחש X פעמים"
+
+**Opponent's turn (waiting):**
+- "תור היריב..." indicator
+- If opponent submitted a guess → show it prominently:
+  - "הניחוש של היריב:" + colored pegs
+  - "הקוד שלך:" + my secret code (for comparison)
+  - "כמה בולים?" / "כמה פגיעות?" steppers
+  - "אשר ניקוד" button
+- After confirming → turn returns to me
+
+**Mid-game win announcement:**
+- Banner: "פצחת את הקוד! 🎉 ממתין לסיום המשחק..." (if I won first)
+- Banner: "היריב פצח את הקוד! המשחק ממשיך..." (if opponent won first)
+
+### Result screen
+Shows both players' results:
+- "ניצחת! פצחת ב־X ניחושים" / "הפסדת"
+- Opponent's result: "היריב פצח ב־Y ניחושים" / "היריב לא הצליח"
+- "שחק שוב" button
+
+---
+
+## Disconnection
+- Any disconnect at any point → `opponent-disconnected` event
+- Remaining player sees: "היריב התנתק — ניצחת! 🏆"
+- Room closed immediately
+
+---
 
 ## Deployment — Render.com
-
-Phase 2 requires a live server for WebSockets.
-
-### Setup steps
-
-1. Push the full project to GitHub (including `server.js`)
-2. Create a free account at render.com
-3. New → Web Service → connect GitHub repo
-4. Settings:
-   - **Build command:** `npm install`
-   - **Start command:** `node server.js`
-   - **Environment:** Node
-5. Render provides a public URL (e.g. `https://mastermind.onrender.com`)
-6. Update the client-side Socket.io connection URL to use this address in production
-
-### Add this file to the project root: `render.yaml`
-
+### render.yaml
 ```yaml
 services:
   - type: web
@@ -90,8 +121,7 @@ services:
     plan: free
 ```
 
-### Add `package.json` if not already present:
-
+### package.json
 ```json
 {
   "name": "mastermind",
@@ -104,19 +134,24 @@ services:
 }
 ```
 
-### Important note
+### Auto-detect environment
+```js
+const SERVER = location.hostname === 'localhost'
+  ? 'http://localhost:3000'
+  : 'https://mastermind.onrender.com';
+```
 
-Free tier on Render sleeps after 15 min of inactivity.
-First connection after sleep takes ~30 seconds to wake up.
-Show a "מתחבר לשרת..." loading message on the client during this time.
+Show "מתחבר לשרת..." on initial load (Render free tier wakes up in ~30 sec).
+
+---
 
 ## Definition of Done
-
 - [ ] Room creation and joining works on mobile
-- [ ] Both players connected and synced
-- [ ] Each player's code stays only on their own device
-- [ ] Guess/feedback loop works correctly between two devices
-- [ ] Simultaneous play (no waiting for turns)
-- [ ] Win detection and result broadcast works
-- [ ] Disconnection handled gracefully
+- [ ] Difficulty + guess limit set by Player 1, respected by both
+- [ ] Each player's code stays only on their device
+- [ ] Turn-based flow works correctly (only active player can guess)
+- [ ] Opponent's guess shown with secret code for feedback input
+- [ ] First player to crack → declared winner, other continues
+- [ ] Guess limit enforced correctly (lose or extra guess)
+- [ ] Disconnection → other player wins immediately
 - [ ] Works on iOS Safari and Android Chrome
