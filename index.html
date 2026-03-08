@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>מאסטרמיינד</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── Home ──────────────────────────────────────────────────── -->
+  <div id="screen-home" class="screen active">
+    <div class="home-dots">
+      <div class="home-dot" style="background:#ff4757"></div>
+      <div class="home-dot" style="background:#ff9f43"></div>
+      <div class="home-dot" style="background:#ffd32a"></div>
+      <div class="home-dot" style="background:#2ed573"></div>
+      <div class="home-dot" style="background:#1e90ff"></div>
+    </div>
+    <h1 class="title">מאסטרמיינד</h1>
+    <p class="subtitle">בול פגיעה</p>
+    <button id="btn-mode-a" class="mode-btn">
+      <span class="mode-btn-emoji">🤔</span>
+      <div class="mode-btn-text">
+        <span class="mode-btn-title">אני מנחש</span>
+        <span class="mode-btn-sub">נחש את הקוד הסודי של המחשב</span>
+      </div>
+    </button>
+    <button id="btn-mode-b" class="mode-btn">
+      <span class="mode-btn-emoji">🤖</span>
+      <div class="mode-btn-text">
+        <span class="mode-btn-title">המחשב מנחש</span>
+        <span class="mode-btn-sub">המחשב ינסה לנחש את הקוד שלך</span>
+      </div>
+    </button>
+  </div>
+
+  <!-- ── Settings (appears before every game) ─────────────────── -->
+  <div id="screen-settings" class="screen">
+    <div class="settings-card glass-card">
+      <button id="back-settings" class="btn-back btn-back-inline">→</button>
+      <h2 class="settings-title">הגדרות משחק</h2>
+      <p class="settings-question">האם צבעים יכולים לחזור על עצמם?</p>
+      <div class="options-group">
+        <button id="opt-yes" class="option-btn selected">כן, צבעים יכולים לחזור</button>
+        <button id="opt-no"  class="option-btn">לא, כל צבע פעם אחת</button>
+      </div>
+      <button id="btn-start-game" class="btn-primary">התחל משחק</button>
+    </div>
+  </div>
+
+  <!-- ── Setup (Mode B only) ───────────────────────────────────── -->
+  <div id="screen-setup" class="screen">
+    <div class="setup-inner">
+      <button id="back-setup" class="btn-back btn-back-inline">→</button>
+      <h2>בחר קוד סודי</h2>
+      <p class="setup-hint">בחר 5 צבעים — רק אתה יודע את הקוד</p>
+      <div id="setup-slots" class="code-slots" dir="ltr"></div>
+      <div id="setup-palette" class="palette"></div>
+      <button id="btn-ready" class="btn-primary" disabled>אני מוכן, תתחיל לנחש</button>
+    </div>
+  </div>
+
+  <!-- ── Game A: Player Guesses ─────────────────────────────────── -->
+  <div id="screen-game-a" class="screen game-screen">
+    <header class="game-header">
+      <button id="back-game-a" class="btn-back">→</button>
+      <span id="counter-a" class="counter"></span>
+    </header>
+    <div id="board-a" class="board"></div>
+    <footer class="game-footer">
+      <div id="palette-a" class="palette"></div>
+      <button id="btn-submit-a" class="btn-primary" disabled>שלח ניחוש</button>
+    </footer>
+  </div>
+
+  <!-- ── Game B: Computer Guesses ──────────────────────────────── -->
+  <div id="screen-game-b" class="screen game-screen">
+    <header class="game-header">
+      <button id="back-game-b" class="btn-back">→</button>
+      <span id="counter-b" class="counter"></span>
+    </header>
+    <div id="board-b" class="board"></div>
+    <footer class="game-footer mode-b-footer">
+
+      <div id="thinking-area" class="thinking-area" hidden>
+        <span>המחשב חושב</span>
+        <div class="thinking-dots">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+
+      <div id="computer-guess-area" class="computer-guess-area" hidden>
+        <p class="guess-label">הניחוש של המחשב:</p>
+        <div id="computer-guess-pegs" class="code-slots" dir="ltr"></div>
+      </div>
+
+      <div id="player-secret-row" class="player-secret-row" hidden>
+        <span class="player-secret-label">הקוד שלך:</span>
+        <div id="player-secret-pegs" class="code-slots" dir="ltr"></div>
+      </div>
+
+      <div id="feedback-controls" class="feedback-controls" hidden>
+        <div class="feedback-row-input">
+          <span class="fb-label">כמה בולים?</span>
+          <div class="stepper">
+            <button id="black-minus" class="btn-step">−</button>
+            <span id="black-val" class="step-val">0</span>
+            <button id="black-plus"  class="btn-step">+</button>
+          </div>
+        </div>
+        <div class="feedback-row-input">
+          <span class="fb-label">כמה פגיעות?</span>
+          <div class="stepper">
+            <button id="white-minus" class="btn-step">−</button>
+            <span id="white-val" class="step-val">0</span>
+            <button id="white-plus" class="btn-step">+</button>
+          </div>
+        </div>
+        <button id="btn-confirm" class="btn-primary">אשר ניקוד</button>
+      </div>
+
+    </footer>
+  </div>
+
+  <!-- ── Result ──────────────────────────────────────────────────── -->
+  <div id="screen-result" class="screen result-screen">
+    <div class="result-card">
+      <div id="result-icon" class="result-icon">🎉</div>
+      <h2 id="result-title"    class="result-title"></h2>
+      <p  id="result-subtitle" class="result-subtitle"></p>
+      <div id="result-code" class="result-code" dir="ltr"></div>
+      <div id="result-history-wrap" class="result-history-wrap" hidden>
+        <p class="result-history-label">היסטוריית הניחושים:</p>
+        <div id="result-history" class="result-history"></div>
+      </div>
+      <button id="btn-play-again" class="btn-primary">שחק שוב</button>
+    </div>
+  </div>
+
+  <script src="ai.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
