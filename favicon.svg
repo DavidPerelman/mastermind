@@ -1,0 +1,10 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="32" height="32" rx="7" fill="#0d1b35"/>
+
+  <!-- 2x2 colored pegs -->
+  <circle cx="9"  cy="9"  r="6" fill="#e63946"/>
+  <circle cx="23" cy="9"  r="6" fill="#27ae60"/>
+  <circle cx="9"  cy="23" r="6" fill="#f4d03f"/>
+  <circle cx="23" cy="23" r="6" fill="#2980b9"/>
+</svg>

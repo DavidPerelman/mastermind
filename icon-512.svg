@@ -1,0 +1,41 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a1040"/>
+      <stop offset="100%" stop-color="#0d1b35"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- Subtle inner border -->
+  <rect width="512" height="512" rx="112" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="3"/>
+
+  <!-- Color pegs row -->
+  <circle cx="90"  cy="168" r="68" fill="#e63946" filter="url(#glow)"/>
+  <circle cx="90"  cy="168" r="68" fill="none" stroke="rgba(255,150,150,0.4)" stroke-width="4"/>
+
+  <circle cx="216" cy="168" r="68" fill="#27ae60" filter="url(#glow)"/>
+  <circle cx="216" cy="168" r="68" fill="none" stroke="rgba(100,220,130,0.4)" stroke-width="4"/>
+
+  <circle cx="342" cy="168" r="68" fill="#f4d03f" filter="url(#glow)"/>
+  <circle cx="342" cy="168" r="68" fill="none" stroke="rgba(255,230,100,0.4)" stroke-width="4"/>
+
+  <!-- 4th peg faded — "unknown" -->
+  <circle cx="468" cy="168" r="68" fill="#2980b9" filter="url(#glow)" opacity="0.28"/>
+  <circle cx="468" cy="168" r="68" fill="none" stroke="rgba(100,160,220,0.25)" stroke-width="4"/>
+
+  <!-- Divider line -->
+  <line x1="56" y1="282" x2="456" y2="282" stroke="rgba(255,255,255,0.09)" stroke-width="3"/>
+
+  <!-- Feedback pegs row: 3 white (bulls) + 1 empty -->
+  <circle cx="90"  cy="364" r="48" fill="white" opacity="0.92"/>
+  <circle cx="216" cy="364" r="48" fill="white" opacity="0.92"/>
+  <circle cx="342" cy="364" r="48" fill="white" opacity="0.92"/>
+  <circle cx="468" cy="364" r="44" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="5"/>
+</svg>

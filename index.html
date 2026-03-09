@@ -7,17 +7,41 @@
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
     <title>מאסטרמיינד</title>
+    <!-- Favicon — גרסה פשוטה, קריאה בכל גודל -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+
+    <!-- Apple devices (שמירה למסך הבית ב-iPhone/iPad) -->
+    <link rel="apple-touch-icon" href="icon-512.svg" />
+
+    <!-- PWA / Android (שמירה כ-app) -->
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#0d1b35" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <!-- ── Home ──────────────────────────────────────────────────── -->
     <div id="screen-home" class="screen active">
       <div class="deco-pegs">
-        <div class="deco-peg" style="background:#e63946;box-shadow:0 0 20px #e6394670"></div>
-        <div class="deco-peg" style="background:#f4d03f;box-shadow:0 0 20px #f4d03f70"></div>
-        <div class="deco-peg" style="background:#2980b9;box-shadow:0 0 20px #2980b970"></div>
-        <div class="deco-peg" style="background:#27ae60;box-shadow:0 0 20px #27ae6070"></div>
-        <div class="deco-peg" style="background:#e67e22;box-shadow:0 0 20px #e67e2270"></div>
+        <div
+          class="deco-peg"
+          style="background: #e63946; box-shadow: 0 0 20px #e6394670"
+        ></div>
+        <div
+          class="deco-peg"
+          style="background: #f4d03f; box-shadow: 0 0 20px #f4d03f70"
+        ></div>
+        <div
+          class="deco-peg"
+          style="background: #2980b9; box-shadow: 0 0 20px #2980b970"
+        ></div>
+        <div
+          class="deco-peg"
+          style="background: #27ae60; box-shadow: 0 0 20px #27ae6070"
+        ></div>
+        <div
+          class="deco-peg"
+          style="background: #e67e22; box-shadow: 0 0 20px #e67e2270"
+        ></div>
       </div>
       <h1 class="title">מאסטרמיינד</h1>
       <p class="subtitle">בול פגיעה</p>
@@ -148,40 +172,69 @@
       <div class="room-card glass-card">
         <button id="back-room" class="btn-back btn-back-inline">→</button>
         <h2 class="settings-title">שחק נגד חבר</h2>
-        <div id="room-connecting" class="connecting-bar" hidden>מתחבר לשרת...</div>
+        <div id="room-connecting" class="connecting-bar" hidden>
+          מתחבר לשרת...
+        </div>
 
         <!-- Initial choice -->
         <div id="room-choice" class="room-choice-btns">
           <button id="btn-create-room" class="btn-primary">צור חדר חדש</button>
-          <button id="btn-join-room-show" class="btn-secondary">הצטרף לחדר קיים</button>
+          <button id="btn-join-room-show" class="btn-secondary">
+            הצטרף לחדר קיים
+          </button>
         </div>
 
         <!-- Create room form -->
         <div id="room-create-form" hidden>
           <p class="settings-question">רמת קושי:</p>
           <div class="options-group">
-            <button id="mp-opt-easy"   class="option-btn selected">קל — 4 צבעים לניחוש</button>
-            <button id="mp-opt-medium" class="option-btn">בינוני — 6 צבעים לניחוש</button>
-            <button id="mp-opt-hard"   class="option-btn">קשה — 5 צבעים לניחוש</button>
+            <button id="mp-opt-easy" class="option-btn selected">
+              קל — 4 צבעים לניחוש
+            </button>
+            <button id="mp-opt-medium" class="option-btn">
+              בינוני — 6 צבעים לניחוש
+            </button>
+            <button id="mp-opt-hard" class="option-btn">
+              קשה — 5 צבעים לניחוש
+            </button>
           </div>
           <p class="settings-question">הגבלת ניחושים:</p>
           <div class="options-group">
-            <button id="mp-limit-none"     class="option-btn selected">ללא הגבלה</button>
-            <button id="mp-limit-hard-btn" class="option-btn">הגבלה קשיחה</button>
+            <button id="mp-limit-none" class="option-btn selected">
+              ללא הגבלה
+            </button>
+            <button id="mp-limit-hard-btn" class="option-btn">
+              הגבלה קשיחה
+            </button>
           </div>
           <div id="mp-limit-count-wrap" class="limit-count-wrap" hidden>
             <span class="fb-label">מספר ניחושים:</span>
-            <input type="number" id="mp-limit-count" class="room-input limit-input"
-                   value="10" min="1" max="99" />
+            <input
+              type="number"
+              id="mp-limit-count"
+              class="room-input limit-input"
+              value="10"
+              min="1"
+              max="99"
+            />
           </div>
-          <button id="btn-create-room-confirm" class="btn-primary">צור חדר</button>
+          <button id="btn-create-room-confirm" class="btn-primary">
+            צור חדר
+          </button>
         </div>
 
         <!-- Join room form -->
         <div id="room-join-form" hidden>
           <p class="settings-question">הזן קוד חדר (4 ספרות):</p>
-          <input type="text" id="room-code-input" class="room-input room-code-input"
-                 maxlength="4" inputmode="numeric" pattern="\d{4}" placeholder="_ _ _ _" />
+          <input
+            type="text"
+            id="room-code-input"
+            class="room-input room-code-input"
+            maxlength="4"
+            inputmode="numeric"
+            pattern="\d{4}"
+            placeholder="_ _ _ _"
+          />
           <button id="btn-join-room-confirm" class="btn-primary">הצטרף</button>
           <p id="join-error-msg" class="error-text" hidden></p>
         </div>
@@ -196,9 +249,7 @@
           <div id="waiting-code" class="room-code-display"></div>
         </div>
         <p id="waiting-label" class="settings-question">ממתין...</p>
-        <div class="thinking-dots">
-          <span></span><span></span><span></span>
-        </div>
+        <div class="thinking-dots"><span></span><span></span><span></span></div>
       </div>
     </div>
 
@@ -219,14 +270,18 @@
         <!-- Panel: my turn — pick colours and submit -->
         <div id="mp-panel-active" hidden>
           <div id="palette-mp" class="palette"></div>
-          <button id="btn-submit-mp" class="btn-primary" disabled>שלח ניחוש</button>
+          <button id="btn-submit-mp" class="btn-primary" disabled>
+            שלח ניחוש
+          </button>
         </div>
 
         <!-- Panel: I submitted, waiting for opponent to give feedback -->
         <div id="mp-panel-guessing" hidden>
           <div class="thinking-area">
             <span>ממתין לאישור ניקוד</span>
-            <div class="thinking-dots"><span></span><span></span><span></span></div>
+            <div class="thinking-dots">
+              <span></span><span></span><span></span>
+            </div>
           </div>
         </div>
 
@@ -234,7 +289,9 @@
         <div id="mp-panel-waiting" hidden>
           <div class="thinking-area">
             <span>ממתין לניחוש של היריב</span>
-            <div class="thinking-dots"><span></span><span></span><span></span></div>
+            <div class="thinking-dots">
+              <span></span><span></span><span></span>
+            </div>
           </div>
         </div>
 
@@ -290,7 +347,10 @@
           </div>
           <div class="mp-history-section">
             <p class="result-history-label">הניחושים שלי:</p>
-            <div id="mp-my-history" class="result-history mp-history-list"></div>
+            <div
+              id="mp-my-history"
+              class="result-history mp-history-list"
+            ></div>
           </div>
         </div>
         <button id="btn-play-again" class="btn-primary">שחק שוב</button>

@@ -53,12 +53,18 @@ function checkGameOver(room) {
       p1: { won: room.won[0], guesses: room.guessCount[0] },
       p2: { won: room.won[1], guesses: room.guessCount[1] },
     };
-    // Reveal each player's secret to their opponent only
+    console.log('game-over secrets:', room.secrets);
     if (room.players[0]) {
-      io.to(room.players[0]).emit('game-over', { ...result, opponentSecret: room.secrets[1] });
+      io.to(room.players[0]).emit('game-over', {
+        ...result,
+        opponentSecret: room.secrets[1],
+      });
     }
     if (room.players[1]) {
-      io.to(room.players[1]).emit('game-over', { ...result, opponentSecret: room.secrets[0] });
+      io.to(room.players[1]).emit('game-over', {
+        ...result,
+        opponentSecret: room.secrets[0],
+      });
     }
     rooms.delete(room.code);
   }
@@ -106,6 +112,7 @@ io.on('connection', (socket) => {
     if (!room) return;
     const idx = playerIndex(room, socket.id);
     if (secret) room.secrets[idx] = secret;
+    console.log(`player ${idx} secret saved:`, room.secrets[idx]);
     room.readyCount++;
     if (room.readyCount === 2) {
       // Both players set their codes — start the game
