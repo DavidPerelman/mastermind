@@ -4,10 +4,15 @@ const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
-
-// Serve static files (index.html, style.css, game.js, ai.js)
-app.use(express.static("."));
+const io = new Server(server, {
+  cors: {
+    origin: [
+      "http://localhost:3000",
+      "https://mastermind-6ttb.onrender.com",
+      /\.netlify\.app$/,
+    ],
+  },
+});
 
 // rooms: Map<code, RoomState>
 // RoomState = { code, players: [p1Id, p2Id], settings, readyCount, secrets, turn, guessCount, won, finished }
