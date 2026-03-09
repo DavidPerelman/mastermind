@@ -82,6 +82,7 @@ io.on("connection", (socket) => {
       settings: { difficulty, limitType, limitCount },
       readyCount: 0,
       secrets: [null, null], // stored only for end-of-game reveal
+      names: [null, null],
       turn: 0, // index into players[] - Player 1 guesses first
       guessCount: [0, 0],
       won: [false, false],
@@ -113,18 +114,26 @@ io.on("connection", (socket) => {
 
   // Each player emits this after setting their secret code.
   // The secret is stored server-side solely for the end-of-game reveal.
-  socket.on("player-ready", ({ secret } = {}) => {
+  socket.on("player-ready", ({ secret, name } = {}) => {
     const room = findRoom(socket.id);
     if (!room) return;
     const idx = playerIndex(room, socket.id);
     if (secret) room.secrets[idx] = secret;
+    if (name) room.names[idx] = name;
+    else room.names[idx] = `שחקן ${idx + 1}`;
     console.log(`player ${idx} secret saved:`, room.secrets[idx]);
     room.readyCount++;
     if (room.readyCount === 2) {
       // Both players set their codes - start the game
-      io.to(room.code).emit("game-start", {
-        settings: room.settings,
+      io.to(room.players[0]).emit("game-start", {
         firstTurn: 0,
+        myName: room.names[0],
+        opponentName: room.names[1],
+      });
+      io.to(room.players[1]).emit("game-start", {
+        firstTurn: 0,
+        myName: room.names[1],
+        opponentName: room.names[0],
       });
     }
   });

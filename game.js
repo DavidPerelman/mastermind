@@ -622,6 +622,7 @@ let socket = null;
 const MP = {
   playerIndex: null, // 0 = P1 (creator), 1 = P2 (joiner)
   settings: null, // { difficulty, limitType, limitCount }
+  opponentName: "",
   mySecret: null, // my secret code - never sent to server
   history: [], // [{ guess, feedback }] - my own guesses + received feedback
   myGuessCount: 0,
@@ -642,6 +643,7 @@ let mpDifficulty = "easy";
 let mpLimitType = "none";
 let mpLimitCount = 10;
 let mpAllowRepeats = true;
+let playerName = "";
 
 // ── Socket lifecycle ──────────────────────────────────────────
 
@@ -693,7 +695,9 @@ function connectSocket() {
 
   // ── Game events ───────────────────────────────────────────────
 
-  socket.on("game-start", ({ firstTurn }) => {
+  socket.on("game-start", ({ firstTurn, myName, opponentName }) => {
+    if (myName) playerName = myName;
+    MP.opponentName = opponentName || "יריב";
     startMpGame(firstTurn);
   });
 
@@ -739,8 +743,9 @@ function connectSocket() {
   // Server tells me the updated count of opponent's guesses
   socket.on("opponent-guess-count", (count) => {
     MP.oppGuessCount = count;
+    const name = MP.opponentName || "היריב";
     $("mp-opp-count").textContent =
-      `היריב ניחש ${count} ${count === 1 ? "פעם" : "פעמים"}`;
+      `${name} ניחש ${count} ${count === 1 ? "פעם" : "פעמים"}`;
   });
 
   // A player cracked the code
@@ -847,6 +852,7 @@ $("mp-opt-repeat-no").addEventListener("click", () => {
 });
 
 $("btn-create-room-confirm").addEventListener("click", () => {
+  playerName = $("player-name-input").value.trim() || "שחקן";
   mpLimitCount = Math.max(1, parseInt($("mp-limit-count").value) || 10);
   if (socket)
     socket.emit("create-room", {
@@ -862,6 +868,7 @@ $("room-code-input").addEventListener("input", () => {
 });
 
 $("btn-join-room-confirm").addEventListener("click", () => {
+  playerName = $("player-name-input").value.trim() || "שחקן";
   const code = $("room-code-input").value.trim();
   if (!/^\d{4}$/.test(code)) return;
   if (socket) socket.emit("join-room", code);
@@ -885,7 +892,7 @@ function goToMpSetup() {
 
 function mpOnReady(secret) {
   MP.mySecret = secret;
-  socket.emit("player-ready", { secret });
+  socket.emit("player-ready", { secret, name: playerName });
   // Show waiting screen until both players are ready
   $("waiting-code-wrap").hidden = MP.playerIndex !== 0;
   if (MP.playerIndex === 0) {
@@ -1008,7 +1015,7 @@ $("back-mp-game").addEventListener("click", () => {
 function updateMpTurnUI() {
   hideMpPanels();
   if (MP.isMyTurn) {
-    $("mp-turn-label").textContent = "תורך לנחש!";
+    $("mp-turn-label").textContent = `תורך לנחש, ${playerName || "שחקן"}!`;
     $("mp-turn-label").className = "mp-turn-label my-turn";
     $("mp-panel-active").hidden = false;
     renderBoardMp();
@@ -1123,15 +1130,17 @@ function showMpResult(me, opp, opponentSecret) {
 
   // Win / loss / tie logic
   let icon, title, subtitle;
+  const myN = playerName || "אתה";
+  const oppN = MP.opponentName || "היריב";
   if (me.won && opp.won) {
     if (me.guesses < opp.guesses) {
       icon = "🎉";
       title = "ניצחת!";
-      subtitle = `פיצחת ב־${me.guesses} ניחושים לעומת ${opp.guesses} של היריב`;
+      subtitle = `פיצחת ב־${me.guesses} ניחושים לעומת ${opp.guesses} של ${oppN}`;
     } else if (me.guesses > opp.guesses) {
       icon = "💔";
       title = "הפסדת";
-      subtitle = `פיצחת ב־${me.guesses} ניחושים, היריב פיצח ב־${opp.guesses}`;
+      subtitle = `פיצחת ב־${me.guesses} ניחושים, ${oppN} פיצח ב־${opp.guesses}`;
     } else {
       icon = "🤝";
       title = "תיקו!";
@@ -1140,11 +1149,11 @@ function showMpResult(me, opp, opponentSecret) {
   } else if (me.won && !opp.won) {
     icon = "🎉";
     title = "ניצחת!";
-    subtitle = `פיצחת ב־${me.guesses} ניחושים - היריב לא הצליח`;
+    subtitle = `פיצחת ב־${me.guesses} ניחושים - ${oppN} לא הצליח`;
   } else if (!me.won && opp.won) {
     icon = "💔";
     title = "הפסדת";
-    subtitle = `היריב פיצח ב־${opp.guesses} ניחושים`;
+    subtitle = `${oppN} פיצח ב־${opp.guesses} ניחושים`;
   } else {
     icon = "💔";
     title = "שניכם הפסדתם";

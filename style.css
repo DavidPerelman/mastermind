@@ -909,6 +909,12 @@ button {
   gap: 0;
 }
 
+.name-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .room-card {
   display: flex;
   flex-direction: column;
