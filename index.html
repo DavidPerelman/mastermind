@@ -7,7 +7,7 @@
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
     <title>מאסטרמיינד</title>
-    <!-- Favicon — גרסה פשוטה, קריאה בכל גודל -->
+    <!-- Favicon - גרסה פשוטה, קריאה בכל גודל -->
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
 
     <!-- Apple devices (שמירה למסך הבית ב-iPhone/iPad) -->
@@ -66,6 +66,7 @@
           <span class="mode-btn-sub">משחק רשת בזמן אמת</span>
         </div>
       </button>
+      <button id="btn-help" class="btn-help">?</button>
     </div>
 
     <!-- ── Settings (appears before every game) ─────────────────── -->
@@ -85,6 +86,15 @@
             קשה - 5 צבעים לניחוש, 8 צבעים אפשריים
           </button>
         </div>
+        <p class="settings-question">חזרת צבעים:</p>
+        <div class="options-group">
+          <button id="opt-repeat-yes" class="option-btn selected">
+            כן - צבעים יכולים לחזור
+          </button>
+          <button id="opt-repeat-no" class="option-btn">
+            לא - כל צבע מופיע פעם אחת
+          </button>
+        </div>
         <button id="btn-start-game" class="btn-primary">התחל משחק</button>
       </div>
     </div>
@@ -95,7 +105,7 @@
         <button id="back-setup" class="btn-back btn-back-inline">→</button>
         <h2>בחר קוד סודי</h2>
         <p id="setup-hint" class="setup-hint">
-          בחר צבעים — רק אתה יודע את הקוד
+          בחר צבעים - רק אתה יודע את הקוד
         </p>
         <div id="setup-slots" class="code-slots" dir="ltr"></div>
         <div id="setup-palette" class="palette"></div>
@@ -189,13 +199,13 @@
           <p class="settings-question">רמת קושי:</p>
           <div class="options-group">
             <button id="mp-opt-easy" class="option-btn selected">
-              קל — 4 צבעים לניחוש
+              קל - 4 צבעים לניחוש
             </button>
             <button id="mp-opt-medium" class="option-btn">
-              בינוני — 6 צבעים לניחוש
+              בינוני - 6 צבעים לניחוש
             </button>
             <button id="mp-opt-hard" class="option-btn">
-              קשה — 5 צבעים לניחוש
+              קשה - 5 צבעים לניחוש
             </button>
           </div>
           <p class="settings-question">הגבלת ניחושים:</p>
@@ -217,6 +227,15 @@
               min="1"
               max="99"
             />
+          </div>
+          <p class="settings-question">חזרת צבעים:</p>
+          <div class="options-group">
+            <button id="mp-opt-repeat-yes" class="option-btn selected">
+              כן - צבעים יכולים לחזור
+            </button>
+            <button id="mp-opt-repeat-no" class="option-btn">
+              לא - כל צבע מופיע פעם אחת
+            </button>
           </div>
           <button id="btn-create-room-confirm" class="btn-primary">
             צור חדר
@@ -267,7 +286,7 @@
       <div id="board-mp" class="board"></div>
 
       <footer class="game-footer mode-b-footer">
-        <!-- Panel: my turn — pick colours and submit -->
+        <!-- Panel: my turn - pick colours and submit -->
         <div id="mp-panel-active" hidden>
           <div id="palette-mp" class="palette"></div>
           <button id="btn-submit-mp" class="btn-primary" disabled>
@@ -285,7 +304,7 @@
           </div>
         </div>
 
-        <!-- Panel: opponent's turn — waiting for them to guess -->
+        <!-- Panel: opponent's turn - waiting for them to guess -->
         <div id="mp-panel-waiting" hidden>
           <div class="thinking-area">
             <span>ממתין לניחוש של היריב</span>
@@ -295,7 +314,7 @@
           </div>
         </div>
 
-        <!-- Panel: opponent guessed my code — I need to give feedback -->
+        <!-- Panel: opponent guessed my code - I need to give feedback -->
         <div id="mp-panel-feedback" hidden>
           <div class="computer-guess-area">
             <p class="guess-label">הניחוש של היריב:</p>
@@ -357,8 +376,66 @@
       </div>
     </div>
 
+    <div id="modal-help" class="modal-overlay" hidden>
+      <div class="modal-card glass-card">
+        <button id="btn-close-help" class="btn-back btn-back-inline">✕</button>
+        <h2 class="settings-title">איך משחקים?</h2>
+        <div class="help-content">
+          <div class="help-section">
+            <p class="help-section-title">🎯 מטרת המשחק</p>
+            <p>פצח את הקוד הסודי של הצבעים לפני שנגמרות לך ההזדמנויות!</p>
+          </div>
+
+          <div class="help-section">
+            <p class="help-section-title">🔄 איך זה עובד?</p>
+            <p>בכל ניחוש בחר קוד של צבעים. אחרי כל ניחוש תקבל משוב:</p>
+            <div class="help-feedback-row">
+              <div class="help-dot black"></div>
+              <div><strong>בול</strong> - הצבע נכון <em>וגם</em> במיקום הנכון</div>
+            </div>
+            <div class="help-feedback-row">
+              <div class="help-dot white"></div>
+              <div><strong>פגיעה</strong> - הצבע קיים בקוד אבל במיקום אחר</div>
+            </div>
+            <div class="help-feedback-row">
+              <div class="help-dot empty"></div>
+              <div><strong>כלום</strong> - הצבע לא קיים בקוד בכלל</div>
+            </div>
+          </div>
+
+          <div class="help-section">
+            <p class="help-section-title">⚠️ חשוב לדעת</p>
+            <ul class="help-list">
+              <li>חזרת צבעים - <strong>ניתן להגדיר</strong> לפני תחילת המשחק</li>
+              <li>הסדר <strong>חשוב</strong> - בול ניתן רק למיקום מדויק</li>
+            </ul>
+          </div>
+
+          <div class="help-section">
+            <p class="help-section-title">🎮 מצבי משחק</p>
+            <ul class="help-list">
+              <li>🤔 <strong>אני מנחש</strong> - נחש את קוד המחשב</li>
+              <li>
+                🤖 <strong>המחשב מנחש</strong> - תן לו את הקוד שלך ותן לו לנסות לפצח
+              </li>
+              <li>
+                👥 <strong>נגד חבר</strong> - שחקן 1 יוצר חדר וקובע את ההגדרות, שחקן
+                2 מצטרף עם קוד 4 ספרות. כל אחד מנחש את הקוד של השני בתורות. מי שפצח
+                במספר ניחושים קטן יותר - ניצח!
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
     <script src="ai.js"></script>
     <script src="game.js"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/sw.js");
+      }
+    </script>
   </body>
 </html>

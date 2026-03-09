@@ -1,25 +1,24 @@
 {
   "name": "מאסטרמיינד",
-  "short_name": "בול פגיעה",
-  "description": "משחק בול פגיעה — נחש את הקוד הסודי",
+  "short_name": "מאסטרמיינד",
+  "description": "משחק בול פגיעה",
   "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#0d1b35",
   "theme_color": "#0d1b35",
-  "dir": "rtl",
-  "lang": "he",
   "icons": [
     {
       "src": "favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "icon-512.svg",
       "sizes": "512x512",
       "type": "image/svg+xml",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ]
 }

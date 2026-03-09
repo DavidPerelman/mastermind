@@ -1,16 +1,16 @@
-'use strict';
+"use strict";
 
 // ── Shared constants (loaded before game.js) ──────────────────────────────
 
 const COLORS = [
-  { id: 'red',    label: 'אדום',  hex: '#e63946' },
-  { id: 'yellow', label: 'צהוב',  hex: '#f4d03f' },
-  { id: 'blue',   label: 'כחול',  hex: '#2980b9' },
-  { id: 'green',  label: 'ירוק',  hex: '#27ae60' },
-  { id: 'orange', label: 'כתום',  hex: '#e67e22' },
-  { id: 'brown',  label: 'חום',   hex: '#a0522d' },
-  { id: 'purple', label: 'סגול',  hex: '#8e44ad' },
-  { id: 'pink',   label: 'ורוד',  hex: '#e91e8c' },
+  { id: "red", label: "אדום", hex: "#FF0000" },
+  { id: "yellow", label: "צהוב", hex: "#f4d03f" },
+  { id: "blue", label: "כחול", hex: "#2980b9" },
+  { id: "green", label: "ירוק", hex: "#27ae60" },
+  { id: "orange", label: "כתום", hex: "#ffa500" },
+  { id: "brown", label: "חום", hex: "#7f3f00" },
+  { id: "purple", label: "סגול", hex: "#8e44ad" },
+  { id: "pink", label: "ורוד", hex: "#e91e8c" },
 ];
 
 const MAX_GUESSES = 10;
@@ -25,18 +25,25 @@ function calcFeedback(secret, guess) {
   const g = [...guess];
   const len = s.length;
   let blacks = 0;
-  let whites  = 0;
+  let whites = 0;
 
   // First pass: exact matches
   for (let i = 0; i < len; i++) {
-    if (g[i] === s[i]) { blacks++; s[i] = null; g[i] = null; }
+    if (g[i] === s[i]) {
+      blacks++;
+      s[i] = null;
+      g[i] = null;
+    }
   }
 
   // Second pass: colour-only matches
   for (let i = 0; i < len; i++) {
     if (g[i] !== null) {
       const j = s.indexOf(g[i]);
-      if (j !== -1) { whites++; s[j] = null; }
+      if (j !== -1) {
+        whites++;
+        s[j] = null;
+      }
     }
   }
 
@@ -45,10 +52,16 @@ function calcFeedback(secret, guess) {
 
 // ── Random code generation ────────────────────────────────────────────────
 
-function generateRandomCode({ codeLength, colors }) {
-  return Array.from({ length: codeLength }, () =>
-    colors[Math.floor(Math.random() * colors.length)].id
-  );
+function generateRandomCode({ codeLength, colors, allowRepeats }) {
+  if (allowRepeats !== false) {
+    return Array.from(
+      { length: codeLength },
+      () => colors[Math.floor(Math.random() * colors.length)].id,
+    );
+  }
+  // No repeats: shuffle and take first codeLength colors
+  const shuffled = [...colors].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, codeLength).map((c) => c.id);
 }
 
 // ── Mode B: constraint-based AI ───────────────────────────────────────────
@@ -60,26 +73,31 @@ function generateRandomCode({ codeLength, colors }) {
 //   3. Next guess = first remaining candidate (typically solves within 6 guesses).
 
 class MastermindAI {
-  constructor({ codeLength, colors }) {
+  constructor({ codeLength, colors, allowRepeats }) {
     this._codeLength = codeLength;
-    this._colors     = colors;
+    this._colors = colors;
+    this._allowRepeats = allowRepeats !== false;
     this._candidates = this._buildAllCodes();
   }
 
   _buildAllCodes() {
-    const ids   = this._colors.map(c => c.id);
-    const codes = [];
-    const n     = ids.length;
+    const ids = this._colors.map((c) => c.id);
+    let codes = [];
+    const n = ids.length;
     const total = Math.pow(n, this._codeLength);
 
     for (let num = 0; num < total; num++) {
       const code = [];
-      let tmp    = num;
+      let tmp = num;
       for (let i = 0; i < this._codeLength; i++) {
         code.push(ids[tmp % n]);
         tmp = Math.floor(tmp / n);
       }
       codes.push(code);
+    }
+
+    if (!this._allowRepeats) {
+      codes = codes.filter((code) => new Set(code).size === code.length);
     }
 
     // Fisher-Yates shuffle so every game starts with a different first guess
@@ -93,13 +111,16 @@ class MastermindAI {
   nextGuess() {
     // Fallback: if candidates exhausted (contradictory feedback), guess randomly
     if (this._candidates.length === 0) {
-      return generateRandomCode({ codeLength: this._codeLength, colors: this._colors });
+      return generateRandomCode({
+        codeLength: this._codeLength,
+        colors: this._colors,
+      });
     }
     return [...this._candidates[0]];
   }
 
   update(lastGuess, blacks, whites) {
-    this._candidates = this._candidates.filter(candidate => {
+    this._candidates = this._candidates.filter((candidate) => {
       const fb = calcFeedback(candidate, lastGuess);
       return fb.blacks === blacks && fb.whites === whites;
     });

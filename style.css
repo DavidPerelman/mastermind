@@ -36,7 +36,7 @@ body {
     -apple-system,
     "Segoe UI",
     sans-serif;
-  /* Deep navy with ambient colour glows — the foundation for glassmorphism */
+  /* Deep navy with ambient colour glows - the foundation for glassmorphism */
   background:
     radial-gradient(
       ellipse 55% 50% at 75% 10%,
@@ -191,14 +191,29 @@ button {
   border-radius: 50%;
   animation: pegBounce 1.8s ease-in-out infinite;
 }
-.deco-peg:nth-child(1) { animation-delay: 0.00s; }
-.deco-peg:nth-child(2) { animation-delay: 0.15s; }
-.deco-peg:nth-child(3) { animation-delay: 0.30s; }
-.deco-peg:nth-child(4) { animation-delay: 0.45s; }
-.deco-peg:nth-child(5) { animation-delay: 0.60s; }
+.deco-peg:nth-child(1) {
+  animation-delay: 0s;
+}
+.deco-peg:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.deco-peg:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.deco-peg:nth-child(4) {
+  animation-delay: 0.45s;
+}
+.deco-peg:nth-child(5) {
+  animation-delay: 0.6s;
+}
 @keyframes pegBounce {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-12px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
 }
 
 .title {
@@ -220,7 +235,7 @@ button {
   margin-bottom: 4px;
 }
 
-/* Mode buttons — glassmorphism cards */
+/* Mode buttons - glassmorphism cards */
 .mode-btn {
   width: 100%;
   max-width: 340px;
@@ -444,7 +459,7 @@ button {
   font-weight: 500;
 }
 
-/* Board: scrollable glass panel — max-width set dynamically in JS per codeLength */
+/* Board: scrollable glass panel - max-width set dynamically in JS per codeLength */
 .board {
   flex: 1;
   min-height: 0;
@@ -458,7 +473,7 @@ button {
   align-self: center;
 }
 
-/* Footer: glass panel — fixed height, never scrolls */
+/* Footer: glass panel - fixed height, never scrolls */
 .game-footer {
   flex-shrink: 0;
   overflow: hidden;
@@ -498,7 +513,7 @@ button {
   flex: 1;
 }
 
-/* Feedback dots — 3-column grid → 3 on top row, 2 on bottom */
+/* Feedback dots - 3-column grid → 3 on top row, 2 on bottom */
 .feedback-area {
   display: grid;
   grid-template-columns: repeat(3, 8px);
@@ -523,7 +538,7 @@ button {
   border-color: #ffffff;
 }
 
-/* Active row — glass tint */
+/* Active row - glass tint */
 .board-row.active {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border2);
@@ -541,7 +556,7 @@ button {
   pointer-events: none;
 }
 
-/* Completed rows — very subtle glass */
+/* Completed rows - very subtle glass */
 .board-row.completed {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border2);
@@ -1073,6 +1088,112 @@ button {
 
 .mp-history-list {
   max-height: 40vh;
+}
+
+.btn-help {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--surface);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  z-index: 100;
+  transition:
+    background 0.15s,
+    transform 0.12s;
+}
+.btn-help:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: scale(1.1);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 24px;
+}
+.modal-card {
+  width: 100%;
+  max-width: 360px;
+  max-height: 88dvh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+.modal-card::-webkit-scrollbar {
+  width: 3px;
+}
+.modal-card::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.help-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  text-align: right;
+}
+.help-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+}
+.help-section-title {
+  font-weight: 700;
+  font-size: 0.97rem;
+}
+.help-feedback-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  direction: rtl;
+}
+.help-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+}
+.help-dot.black {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+.help-dot.white {
+  background: #ffffff;
+}
+.help-dot.empty {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.help-list {
+  padding-right: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 @media (max-height: 700px) {

@@ -42,7 +42,7 @@ function buildRow(num, guessArr, feedback, options = {}) {
   const numEl = el("span", "row-num");
   numEl.textContent = num ?? "";
 
-  // Feedback dots — 2 columns for 4-peg codes, 3 columns for 5-peg codes
+  // Feedback dots - 2 columns for 4-peg codes, 3 columns for 5-peg codes
   const fbArea = el("div", "feedback-area");
   const fbCols = codeLen <= 4 ? 2 : 3;
   fbArea.style.gridTemplateColumns = `repeat(${fbCols}, 8px)`;
@@ -103,7 +103,7 @@ function renderPalette(containerId, onPick) {
 }
 
 // ════════════════════════════════════════════════════════════════
-// SETTINGS — shown before every game start
+// SETTINGS - shown before every game start
 // ════════════════════════════════════════════════════════════════
 const DIFFICULTIES = [
   { id: "easy", label: "קל", codeLength: 4, colorCount: 6 },
@@ -113,12 +113,27 @@ const DIFFICULTIES = [
 
 const settings = {
   difficulty: "easy",
+  allowRepeats: true,
   pendingMode: null,
   get config() {
     const d = DIFFICULTIES.find((d) => d.id === this.difficulty);
-    return { codeLength: d.codeLength, colors: COLORS.slice(0, d.colorCount) };
+    return {
+      codeLength: d.codeLength,
+      colors: COLORS.slice(0, d.colorCount),
+      allowRepeats: this.allowRepeats,
+    };
   },
 };
+
+$("btn-help").addEventListener("click", () => {
+  $("modal-help").hidden = false;
+});
+$("btn-close-help").addEventListener("click", () => {
+  $("modal-help").hidden = true;
+});
+$("modal-help").addEventListener("click", (e) => {
+  if (e.target === $("modal-help")) $("modal-help").hidden = true;
+});
 
 $("btn-mode-a").addEventListener("click", () => {
   settings.pendingMode = "A";
@@ -136,7 +151,24 @@ $("btn-mode-b").addEventListener("click", () => {
       .querySelectorAll("#screen-settings .option-btn")
       .forEach((b) => b.classList.remove("selected"));
     $(`opt-${id}`).classList.add("selected");
+    // Re-select the active repeat option
+    if (settings.allowRepeats) {
+      $("opt-repeat-yes").classList.add("selected");
+    } else {
+      $("opt-repeat-no").classList.add("selected");
+    }
   });
+});
+
+$("opt-repeat-yes").addEventListener("click", () => {
+  settings.allowRepeats = true;
+  $("opt-repeat-yes").classList.add("selected");
+  $("opt-repeat-no").classList.remove("selected");
+});
+$("opt-repeat-no").addEventListener("click", () => {
+  settings.allowRepeats = false;
+  $("opt-repeat-no").classList.add("selected");
+  $("opt-repeat-yes").classList.remove("selected");
 });
 
 $("btn-start-game").addEventListener("click", () => {
@@ -147,14 +179,14 @@ $("btn-start-game").addEventListener("click", () => {
 $("back-settings").addEventListener("click", () => showScreen("screen-home"));
 
 // ════════════════════════════════════════════════════════════════
-// SETUP  (Mode B — player picks their secret code)
+// SETUP  (Mode B - player picks their secret code)
 // ════════════════════════════════════════════════════════════════
 let setupCode = [];
 
 function goToSetup() {
   const { codeLength } = settings.config;
   setupCode = Array(codeLength).fill(null);
-  $("setup-hint").textContent = `בחר ${codeLength} צבעים — רק אתה יודע את הקוד`;
+  $("setup-hint").textContent = `בחר ${codeLength} צבעים - רק אתה יודע את הקוד`;
   renderSetupSlots();
   renderPalette("setup-palette", onSetupColorPick);
   $("btn-ready").disabled = true;
@@ -178,6 +210,8 @@ function renderSetupSlots() {
 }
 
 function onSetupColorPick(colorId) {
+  if (settings.config.allowRepeats === false && setupCode.includes(colorId))
+    return;
   const idx = setupCode.indexOf(null);
   if (idx === -1) return;
   setupCode[idx] = colorId;
@@ -202,7 +236,7 @@ $("back-setup").addEventListener("click", () => {
 let G = {};
 
 // ════════════════════════════════════════════════════════════════
-// MODE A — Player guesses the computer's secret code
+// MODE A - Player guesses the computer's secret code
 // ════════════════════════════════════════════════════════════════
 function startModeA() {
   const cfg = settings.config;
@@ -355,7 +389,7 @@ function renderResultHistory(history) {
 }
 
 // ════════════════════════════════════════════════════════════════
-// MODE B — Computer guesses the player's secret code
+// MODE B - Computer guesses the player's secret code
 // ════════════════════════════════════════════════════════════════
 function startModeB(playerSecret) {
   G = {
@@ -529,7 +563,7 @@ function confirmFeedback() {
 
   if (G.ai.candidatesLeft === 0) {
     console.warn(
-      "Inconsistent feedback detected — no valid candidates remain.",
+      "Inconsistent feedback detected - no valid candidates remain.",
     );
   }
 
@@ -573,7 +607,7 @@ $("btn-play-again").addEventListener("click", () => {
 });
 
 // ════════════════════════════════════════════════════════════════
-// MULTIPLAYER — Socket.io client
+// MULTIPLAYER - Socket.io client
 // ════════════════════════════════════════════════════════════════
 
 const SERVER_URL =
@@ -588,8 +622,8 @@ let socket = null;
 const MP = {
   playerIndex: null, // 0 = P1 (creator), 1 = P2 (joiner)
   settings: null, // { difficulty, limitType, limitCount }
-  mySecret: null, // my secret code — never sent to server
-  history: [], // [{ guess, feedback }] — my own guesses + received feedback
+  mySecret: null, // my secret code - never sent to server
+  history: [], // [{ guess, feedback }] - my own guesses + received feedback
   myGuessCount: 0,
   oppGuessCount: 0,
   isMyTurn: false,
@@ -599,7 +633,7 @@ const MP = {
   selectedSlot: 0,
   blackInput: 0,
   whiteInput: 0,
-  opponentHistory: [], // [{ guess, feedback }] — opponent's guesses I evaluated
+  opponentHistory: [], // [{ guess, feedback }] - opponent's guesses I evaluated
   _pendingOppGuess: null, // opponent's current guess, held until I confirm feedback
 };
 
@@ -607,6 +641,7 @@ const MP = {
 let mpDifficulty = "easy";
 let mpLimitType = "none";
 let mpLimitCount = 10;
+let mpAllowRepeats = true;
 
 // ── Socket lifecycle ──────────────────────────────────────────
 
@@ -634,17 +669,18 @@ function connectSocket() {
   });
 
   socket.on("opponent-joined", () => {
-    // P1: opponent arrived — proceed to setup
+    // P1: opponent arrived - proceed to setup
     MP.settings = {
       difficulty: mpDifficulty,
       limitType: mpLimitType,
       limitCount: mpLimitCount,
+      allowRepeats: mpAllowRepeats,
     };
     goToMpSetup();
   });
 
   socket.on("room-joined", ({ settings: s }) => {
-    // P2: joined successfully — proceed directly to setup
+    // P2: joined successfully - proceed directly to setup
     MP.playerIndex = 1;
     MP.settings = s;
     goToMpSetup();
@@ -661,7 +697,7 @@ function connectSocket() {
     startMpGame(firstTurn);
   });
 
-  // Opponent guessed my code — I need to give feedback
+  // Opponent guessed my code - I need to give feedback
   socket.on("opponent-guess", ({ guess }) => {
     showMpFeedbackPanel(guess);
   });
@@ -714,7 +750,7 @@ function connectSocket() {
     }
   });
 
-  // Both players finished — show final result
+  // Both players finished - show final result
   socket.on("game-over", ({ p1, p2, opponentSecret }) => {
     console.log("opponentSecret received:", opponentSecret);
     const me = MP.playerIndex === 0 ? p1 : p2;
@@ -799,6 +835,17 @@ $("mp-limit-hard-btn").addEventListener("click", () => {
   $("mp-limit-count-wrap").hidden = false;
 });
 
+$("mp-opt-repeat-yes").addEventListener("click", () => {
+  mpAllowRepeats = true;
+  $("mp-opt-repeat-yes").classList.add("selected");
+  $("mp-opt-repeat-no").classList.remove("selected");
+});
+$("mp-opt-repeat-no").addEventListener("click", () => {
+  mpAllowRepeats = false;
+  $("mp-opt-repeat-no").classList.add("selected");
+  $("mp-opt-repeat-yes").classList.remove("selected");
+});
+
 $("btn-create-room-confirm").addEventListener("click", () => {
   mpLimitCount = Math.max(1, parseInt($("mp-limit-count").value) || 10);
   if (socket)
@@ -806,6 +853,7 @@ $("btn-create-room-confirm").addEventListener("click", () => {
       difficulty: mpDifficulty,
       limitType: mpLimitType,
       limitCount: mpLimitCount,
+      allowRepeats: mpAllowRepeats,
     });
 });
 
@@ -823,10 +871,11 @@ $("btn-join-room-confirm").addEventListener("click", () => {
 
 function goToMpSetup() {
   settings.difficulty = MP.settings.difficulty;
+  settings.allowRepeats = MP.settings.allowRepeats !== false;
   settings.pendingMode = "MP";
   const { codeLength } = settings.config;
   setupCode = Array(codeLength).fill(null);
-  $("setup-hint").textContent = `בחר ${codeLength} צבעים — הקוד שלך יישאר פרטי`;
+  $("setup-hint").textContent = `בחר ${codeLength} צבעים - הקוד שלך יישאר פרטי`;
   $("btn-ready").textContent = "אני מוכן";
   renderSetupSlots();
   renderPalette("setup-palette", onSetupColorPick);
@@ -876,7 +925,7 @@ function renderBoardMp() {
   const codeLen = settings.config.codeLength;
   board.innerHTML = "";
 
-  // Empty future rows — only meaningful with a hard guess limit
+  // Empty future rows - only meaningful with a hard guess limit
   if (MP.settings.limitType === "hard") {
     const future =
       MP.settings.limitCount - MP.myGuessCount - (MP.myFinished ? 0 : 1);
@@ -897,7 +946,7 @@ function renderBoardMp() {
     );
   }
 
-  // Active row — only when it's my turn and I haven't finished
+  // Active row - only when it's my turn and I haven't finished
   if (MP.isMyTurn && !MP.myFinished) {
     board.appendChild(
       buildRow(MP.myGuessCount + 1, MP.currentGuess, null, {
@@ -1076,27 +1125,33 @@ function showMpResult(me, opp, opponentSecret) {
   let icon, title, subtitle;
   if (me.won && opp.won) {
     if (me.guesses < opp.guesses) {
-      icon = "🎉"; title = "ניצחת!";
+      icon = "🎉";
+      title = "ניצחת!";
       subtitle = `פיצחת ב־${me.guesses} ניחושים לעומת ${opp.guesses} של היריב`;
     } else if (me.guesses > opp.guesses) {
-      icon = "💔"; title = "הפסדת";
+      icon = "💔";
+      title = "הפסדת";
       subtitle = `פיצחת ב־${me.guesses} ניחושים, היריב פיצח ב־${opp.guesses}`;
     } else {
-      icon = "🤝"; title = "תיקו!";
+      icon = "🤝";
+      title = "תיקו!";
       subtitle = `שניכם פיצחתם ב־${me.guesses} ניחושים`;
     }
   } else if (me.won && !opp.won) {
-    icon = "🎉"; title = "ניצחת!";
-    subtitle = `פיצחת ב־${me.guesses} ניחושים — היריב לא הצליח`;
+    icon = "🎉";
+    title = "ניצחת!";
+    subtitle = `פיצחת ב־${me.guesses} ניחושים - היריב לא הצליח`;
   } else if (!me.won && opp.won) {
-    icon = "💔"; title = "הפסדת";
+    icon = "💔";
+    title = "הפסדת";
     subtitle = `היריב פיצח ב־${opp.guesses} ניחושים`;
   } else {
-    icon = "💔"; title = "שניכם הפסדתם";
+    icon = "💔";
+    title = "שניכם הפסדתם";
     subtitle = "אף אחד לא פיצח את הקוד";
   }
-  $("result-icon").textContent    = icon;
-  $("result-title").textContent   = title;
+  $("result-icon").textContent = icon;
+  $("result-title").textContent = title;
   $("result-subtitle").textContent = subtitle;
   $("mp-result-opp").hidden = true;
 
