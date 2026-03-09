@@ -129,7 +129,7 @@ $('btn-mode-b').addEventListener('click', () => {
 ['easy', 'medium', 'hard'].forEach(id => {
   $(`opt-${id}`).addEventListener('click', () => {
     settings.difficulty = id;
-    document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('#screen-settings .option-btn').forEach(b => b.classList.remove('selected'));
     $(`opt-${id}`).classList.add('selected');
   });
 });
@@ -182,10 +182,14 @@ function onSetupColorPick(colorId) {
 
 $('btn-ready').addEventListener('click', () => {
   if (setupCode.includes(null)) return;
-  startModeB([...setupCode]);
+  if (settings.pendingMode === 'MP') mpOnReady([...setupCode]);
+  else                               startModeB([...setupCode]);
 });
 
-$('back-setup').addEventListener('click', () => showScreen('screen-settings'));
+$('back-setup').addEventListener('click', () => {
+  if (settings.pendingMode === 'MP') { leaveGame(); showScreen('screen-home'); }
+  else showScreen('screen-settings');
+});
 
 // ── Game State ────────────────────────────────────────────────────
 let G = {};
@@ -315,6 +319,8 @@ function showResultA(won) {
     $('result-title').textContent    = 'הפסדת';
     $('result-subtitle').textContent = 'הקוד היה:';
   }
+  $('mp-result-opp').hidden   = true;
+  $('mp-history-wrap').hidden = true;
   renderResultCode(G.secret);
   renderResultHistory(G.history);
   showScreen('screen-result');
@@ -512,8 +518,10 @@ function showResultB(playerWon) {
     $('result-title').textContent    = 'המחשב ניצח';
     $('result-subtitle').textContent = `פצח את הקוד ב־${G.attempt} ניסיונות`;
   }
-  $('result-code').innerHTML = '';
+  $('result-code').innerHTML      = '';
   $('result-history-wrap').hidden = true;
+  $('mp-result-opp').hidden       = true;
+  $('mp-history-wrap').hidden     = true;
   showScreen('screen-result');
 }
 
@@ -530,4 +538,510 @@ function renderResultCode(code) {
   }
 }
 
-$('btn-play-again').addEventListener('click', () => showScreen('screen-home'));
+$('btn-play-again').addEventListener('click', () => {
+  leaveGame();
+  showScreen('screen-home');
+});
+
+// ════════════════════════════════════════════════════════════════
+// MULTIPLAYER — Socket.io client
+// ════════════════════════════════════════════════════════════════
+
+const SERVER_URL = location.hostname === 'localhost'
+  ? 'http://localhost:3000'
+  : 'https://mastermind.onrender.com';
+
+// Active socket (created on first MP click, destroyed on leave)
+let socket = null;
+
+// Per-game multiplayer state
+const MP = {
+  playerIndex: null,   // 0 = P1 (creator), 1 = P2 (joiner)
+  settings:    null,   // { difficulty, limitType, limitCount }
+  mySecret:    null,   // my secret code — never sent to server
+  history:     [],     // [{ guess, feedback }] — my own guesses + received feedback
+  myGuessCount:  0,
+  oppGuessCount: 0,
+  isMyTurn:    false,
+  myFinished:      false,
+  myWon:           false,
+  currentGuess:    null,
+  selectedSlot:    0,
+  blackInput:      0,
+  whiteInput:      0,
+  opponentHistory: [],   // [{ guess, feedback }] — opponent's guesses I evaluated
+  _pendingOppGuess: null, // opponent's current guess, held until I confirm feedback
+};
+
+// Room-creation form state
+let mpDifficulty = 'easy';
+let mpLimitType  = 'none';
+let mpLimitCount = 10;
+
+// ── Socket lifecycle ──────────────────────────────────────────
+
+function connectSocket() {
+  if (socket) return;
+  socket = io(SERVER_URL, { autoConnect: true });
+
+  socket.on('connect', () => {
+    $('room-connecting').hidden = true;
+  });
+
+  socket.on('connect_error', () => {
+    $('room-connecting').textContent = 'שגיאת חיבור לשרת...';
+    $('room-connecting').hidden = false;
+  });
+
+  // ── Room events ──────────────────────────────────────────────
+
+  socket.on('room-created', ({ code }) => {
+    MP.playerIndex = 0;
+    $('waiting-code').textContent   = code;
+    $('waiting-code-wrap').hidden   = false;
+    $('waiting-label').textContent  = 'ממתין לשחקן השני';
+    showScreen('screen-waiting');
+  });
+
+  socket.on('opponent-joined', () => {
+    // P1: opponent arrived — proceed to setup
+    MP.settings = { difficulty: mpDifficulty, limitType: mpLimitType, limitCount: mpLimitCount };
+    goToMpSetup();
+  });
+
+  socket.on('room-joined', ({ settings: s }) => {
+    // P2: joined successfully — proceed directly to setup
+    MP.playerIndex = 1;
+    MP.settings    = s;
+    goToMpSetup();
+  });
+
+  socket.on('join-error', msg => {
+    $('join-error-msg').textContent = msg;
+    $('join-error-msg').hidden      = false;
+  });
+
+  // ── Game events ───────────────────────────────────────────────
+
+  socket.on('game-start', ({ firstTurn }) => {
+    startMpGame(firstTurn);
+  });
+
+  // Opponent guessed my code — I need to give feedback
+  socket.on('opponent-guess', ({ guess }) => {
+    showMpFeedbackPanel(guess);
+  });
+
+  // I received feedback on my guess from the opponent
+  socket.on('feedback', ({ blacks, whites }) => {
+    const codeLen = settings.config.codeLength;
+    MP.history.push({ guess: [...MP.currentGuess], feedback: { blacks, whites } });
+    MP.myGuessCount++;
+    MP.currentGuess  = Array(codeLen).fill(null);
+    MP.selectedSlot  = 0;
+    renderBoardMp();
+
+    if (blacks === codeLen) {
+      MP.myWon = MP.myFinished = true;
+      socket.emit('player-won', { guessCount: MP.myGuessCount });
+      showMpBanner('פצחת את הקוד! 🎉 ממתין לסיום המשחק...');
+      hideMpPanels();
+    } else if (MP.settings.limitType === 'hard' && MP.myGuessCount >= MP.settings.limitCount) {
+      MP.myFinished = true;
+      socket.emit('player-lost');
+      hideMpPanels();
+    }
+    // turn-change will update the UI for the next state
+  });
+
+  // Whose turn it is changed
+  socket.on('turn-change', ({ turn }) => {
+    MP.isMyTurn = (turn === MP.playerIndex);
+    if (!MP.myFinished) updateMpTurnUI();
+  });
+
+  // Server tells me the updated count of opponent's guesses
+  socket.on('opponent-guess-count', count => {
+    MP.oppGuessCount = count;
+    $('mp-opp-count').textContent =
+      `היריב ניחש ${count} ${count === 1 ? 'פעם' : 'פעמים'}`;
+  });
+
+  // A player cracked the code
+  socket.on('player-won', ({ playerIndex }) => {
+    if (playerIndex !== MP.playerIndex && !MP.myFinished) {
+      showMpBanner('היריב פצח את הקוד! המשחק ממשיך...');
+    }
+  });
+
+  // Both players finished — show final result
+  socket.on('game-over', ({ p1, p2, opponentSecret }) => {
+    console.log('opponentSecret received:', opponentSecret);
+    const me  = MP.playerIndex === 0 ? p1 : p2;
+    const opp = MP.playerIndex === 0 ? p2 : p1;
+    showMpResult(me, opp, opponentSecret);
+  });
+
+  socket.on('opponent-disconnected', () => {
+    $('result-icon').textContent      = '🏆';
+    $('result-title').textContent     = 'ניצחת!';
+    $('result-subtitle').textContent  = 'היריב התנתק';
+    $('mp-result-opp').hidden         = true;
+    $('result-code').innerHTML        = '';
+    $('result-history-wrap').hidden   = true;
+    socket = null; // already disconnected from server side
+    showScreen('screen-result');
+  });
+}
+
+function leaveGame() {
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+}
+
+// ── Room screen ───────────────────────────────────────────────
+
+$('btn-mode-mp').addEventListener('click', () => {
+  connectSocket();
+  showRoomChoice();
+  $('room-connecting').hidden = !!(socket && socket.connected);
+  showScreen('screen-room');
+});
+
+$('back-room').addEventListener('click', () => {
+  leaveGame();
+  showScreen('screen-home');
+});
+
+function showRoomChoice() {
+  $('room-choice').hidden       = false;
+  $('room-create-form').hidden  = true;
+  $('room-join-form').hidden    = true;
+  $('join-error-msg').hidden    = true;
+}
+
+$('btn-create-room').addEventListener('click', () => {
+  $('room-choice').hidden      = true;
+  $('room-create-form').hidden = false;
+});
+
+$('btn-join-room-show').addEventListener('click', () => {
+  $('room-choice').hidden     = true;
+  $('room-join-form').hidden  = false;
+  $('join-error-msg').hidden  = true;
+  $('room-code-input').value  = '';
+});
+
+// MP difficulty selection (independent from SP settings buttons)
+['easy', 'medium', 'hard'].forEach(id => {
+  $(`mp-opt-${id}`).addEventListener('click', () => {
+    mpDifficulty = id;
+    document.querySelectorAll('#room-create-form .option-btn[id^="mp-opt"]')
+      .forEach(b => b.classList.remove('selected'));
+    $(`mp-opt-${id}`).classList.add('selected');
+  });
+});
+
+$('mp-limit-none').addEventListener('click', () => {
+  mpLimitType = 'none';
+  $('mp-limit-none').classList.add('selected');
+  $('mp-limit-hard-btn').classList.remove('selected');
+  $('mp-limit-count-wrap').hidden = true;
+});
+
+$('mp-limit-hard-btn').addEventListener('click', () => {
+  mpLimitType = 'hard';
+  $('mp-limit-hard-btn').classList.add('selected');
+  $('mp-limit-none').classList.remove('selected');
+  $('mp-limit-count-wrap').hidden = false;
+});
+
+$('btn-create-room-confirm').addEventListener('click', () => {
+  mpLimitCount = Math.max(1, parseInt($('mp-limit-count').value) || 10);
+  if (socket) socket.emit('create-room', {
+    difficulty: mpDifficulty,
+    limitType:  mpLimitType,
+    limitCount: mpLimitCount,
+  });
+});
+
+$('room-code-input').addEventListener('input', () => {
+  $('join-error-msg').hidden = true;
+});
+
+$('btn-join-room-confirm').addEventListener('click', () => {
+  const code = $('room-code-input').value.trim();
+  if (!/^\d{4}$/.test(code)) return;
+  if (socket) socket.emit('join-room', code);
+});
+
+// ── Setup (MP mode) ───────────────────────────────────────────
+
+function goToMpSetup() {
+  settings.difficulty  = MP.settings.difficulty;
+  settings.pendingMode = 'MP';
+  const { codeLength } = settings.config;
+  setupCode = Array(codeLength).fill(null);
+  $('setup-hint').textContent   = `בחר ${codeLength} צבעים — הקוד שלך יישאר פרטי`;
+  $('btn-ready').textContent    = 'אני מוכן';
+  renderSetupSlots();
+  renderPalette('setup-palette', onSetupColorPick);
+  $('btn-ready').disabled = true;
+  showScreen('screen-setup');
+}
+
+function mpOnReady(secret) {
+  MP.mySecret = secret;
+  socket.emit('player-ready', { secret });
+  // Show waiting screen until both players are ready
+  $('waiting-code-wrap').hidden  = (MP.playerIndex !== 0);
+  if (MP.playerIndex === 0) {
+    // code was already set in waiting-code from room-created event
+  }
+  $('waiting-label').textContent = 'ממתין לשחקן השני...';
+  showScreen('screen-waiting');
+}
+
+// ── Game ──────────────────────────────────────────────────────
+
+function startMpGame(firstTurn) {
+  MP.history          = [];
+  MP.opponentHistory  = [];
+  MP.myGuessCount     = 0;
+  MP.oppGuessCount    = 0;
+  MP.myWon            = false;
+  MP.myFinished       = false;
+  MP.isMyTurn      = (firstTurn === MP.playerIndex);
+  MP.currentGuess  = Array(settings.config.codeLength).fill(null);
+  MP.selectedSlot  = 0;
+  MP.blackInput    = 0;
+  MP.whiteInput    = 0;
+
+  $('board-mp').style.maxWidth  = calcBoardWidth(settings.config.codeLength) + 'px';
+  $('mp-banner').hidden         = true;
+  $('mp-opp-count').textContent = 'היריב ניחש 0 פעמים';
+
+  renderBoardMp();
+  updateMpTurnUI();
+  showScreen('screen-mp-game');
+}
+
+function renderBoardMp() {
+  const board   = $('board-mp');
+  const codeLen = settings.config.codeLength;
+  board.innerHTML = '';
+
+  // Empty future rows — only meaningful with a hard guess limit
+  if (MP.settings.limitType === 'hard') {
+    const future = MP.settings.limitCount - MP.myGuessCount - (MP.myFinished ? 0 : 1);
+    for (let i = 0; i < Math.max(0, future); i++) {
+      board.appendChild(buildRow(null, null, null, { empty: true }));
+    }
+  }
+
+  // Completed rows (my previous guesses)
+  for (let i = 0; i < MP.history.length; i++) {
+    const { guess, feedback } = MP.history[i];
+    board.appendChild(buildRow(i + 1, guess, feedback, {
+      completed: true,
+      winning:   feedback.blacks === codeLen,
+      animate:   i === MP.history.length - 1,
+    }));
+  }
+
+  // Active row — only when it's my turn and I haven't finished
+  if (MP.isMyTurn && !MP.myFinished) {
+    board.appendChild(buildRow(MP.myGuessCount + 1, MP.currentGuess, null, {
+      active:       true,
+      selectedSlot: MP.selectedSlot,
+      onSlotClick:  i => {
+        if (MP.currentGuess[i] !== null) {
+          MP.currentGuess[i] = null;
+          $('btn-submit-mp').disabled = true;
+        }
+        MP.selectedSlot = i;
+        renderBoardMp();
+        renderPalette('palette-mp', onMpColorPick);
+      },
+    }));
+  }
+
+  board.scrollTop = board.scrollHeight;
+}
+
+function onMpColorPick(colorId) {
+  if (!MP.isMyTurn || MP.myFinished) return;
+  MP.currentGuess[MP.selectedSlot] = colorId;
+
+  const codeLen  = settings.config.codeLength;
+  const nextEmpty = MP.currentGuess.findIndex((c, i) => i > MP.selectedSlot && c === null);
+  if (nextEmpty !== -1) {
+    MP.selectedSlot = nextEmpty;
+  } else {
+    const anyEmpty  = MP.currentGuess.indexOf(null);
+    MP.selectedSlot = anyEmpty !== -1 ? anyEmpty : Math.min(MP.selectedSlot + 1, codeLen - 1);
+  }
+
+  renderBoardMp();
+  renderPalette('palette-mp', onMpColorPick);
+  $('btn-submit-mp').disabled = MP.currentGuess.includes(null);
+}
+
+$('btn-submit-mp').addEventListener('click', () => {
+  if (!MP.isMyTurn || MP.myFinished) return;
+  if (MP.currentGuess.includes(null)) return;
+  socket.emit('submit-guess', [...MP.currentGuess]);
+  // Switch to "waiting for feedback" state
+  hideMpPanels();
+  $('mp-panel-guessing').hidden  = false;
+  $('mp-turn-label').textContent = 'ממתין לאישור ניקוד';
+  $('mp-turn-label').className   = 'mp-turn-label opp-turn';
+});
+
+$('back-mp-game').addEventListener('click', () => {
+  leaveGame();
+  showScreen('screen-home');
+});
+
+function updateMpTurnUI() {
+  hideMpPanels();
+  if (MP.isMyTurn) {
+    $('mp-turn-label').textContent = 'תורך לנחש!';
+    $('mp-turn-label').className   = 'mp-turn-label my-turn';
+    $('mp-panel-active').hidden    = false;
+    renderBoardMp();
+    renderPalette('palette-mp', onMpColorPick);
+    $('btn-submit-mp').disabled = MP.currentGuess.includes(null);
+  } else {
+    $('mp-turn-label').textContent = 'תור היריב...';
+    $('mp-turn-label').className   = 'mp-turn-label opp-turn';
+    $('mp-panel-waiting').hidden   = false;
+    renderBoardMp();
+  }
+}
+
+function hideMpPanels() {
+  ['mp-panel-active', 'mp-panel-guessing', 'mp-panel-waiting', 'mp-panel-feedback']
+    .forEach(id => $(id).hidden = true);
+}
+
+function showMpBanner(msg) {
+  const b = $('mp-banner');
+  b.textContent = msg;
+  b.hidden      = false;
+}
+
+// ── Feedback panel (I'm the code owner, opponent guessed) ─────
+
+function showMpFeedbackPanel(oppGuess) {
+  MP._pendingOppGuess = [...oppGuess];
+
+  // Render opponent's guess pegs
+  const oppPegs = $('mp-opp-guess-pegs');
+  oppPegs.innerHTML = '';
+  for (const colorId of oppGuess) {
+    const slot = el('div', 'peg-slot');
+    applyPegColor(slot, colorId);
+    oppPegs.appendChild(slot);
+  }
+
+  // Render my secret code for comparison
+  const secretPegs = $('mp-my-secret-pegs');
+  secretPegs.innerHTML = '';
+  for (const colorId of MP.mySecret) {
+    const slot = el('div', 'peg-slot');
+    applyPegColor(slot, colorId);
+    secretPegs.appendChild(slot);
+  }
+
+  // Reset stepper inputs
+  MP.blackInput = 0;
+  MP.whiteInput = 0;
+  $('mp-black-val').textContent = '0';
+  $('mp-white-val').textContent = '0';
+
+  hideMpPanels();
+  $('mp-panel-feedback').hidden  = false;
+  $('mp-turn-label').textContent = 'תן ניקוד לניחוש של היריב';
+  $('mp-turn-label').className   = 'mp-turn-label';
+}
+
+// MP feedback steppers
+$('mp-black-minus').addEventListener('click', () => {
+  if (MP.blackInput > 0) { MP.blackInput--; $('mp-black-val').textContent = MP.blackInput; }
+});
+$('mp-black-plus').addEventListener('click', () => {
+  if (MP.blackInput + MP.whiteInput < settings.config.codeLength) {
+    MP.blackInput++;
+    $('mp-black-val').textContent = MP.blackInput;
+  }
+});
+$('mp-white-minus').addEventListener('click', () => {
+  if (MP.whiteInput > 0) { MP.whiteInput--; $('mp-white-val').textContent = MP.whiteInput; }
+});
+$('mp-white-plus').addEventListener('click', () => {
+  if (MP.whiteInput + MP.blackInput < settings.config.codeLength) {
+    MP.whiteInput++;
+    $('mp-white-val').textContent = MP.whiteInput;
+  }
+});
+
+$('mp-btn-confirm').addEventListener('click', () => {
+  const blacks = MP.blackInput;
+  const whites = MP.whiteInput;
+  if (MP._pendingOppGuess) {
+    MP.opponentHistory.push({ guess: MP._pendingOppGuess, feedback: { blacks, whites } });
+    MP._pendingOppGuess = null;
+  }
+  socket.emit('submit-feedback', { blacks, whites });
+  hideMpPanels();
+  // If I've already finished (won), just keep showing banner while opponent continues
+  // Otherwise turn-change will call updateMpTurnUI
+});
+
+// ── Result ────────────────────────────────────────────────────
+
+function showMpResult(me, opp, opponentSecret) {
+  // Hide SP-only sections before rendering anything
+  $('result-history-wrap').hidden = true;
+  $('result-code').innerHTML      = '';
+
+  if (me.won) {
+    $('result-icon').textContent     = '🎉';
+    $('result-title').textContent    = 'ניצחת!';
+    $('result-subtitle').textContent = `פצחת ב־${me.guesses} ניחושים`;
+  } else {
+    $('result-icon').textContent     = '💔';
+    $('result-title').textContent    = 'הפסדת';
+    $('result-subtitle').textContent = 'לא הצלחת לפצח את הקוד';
+  }
+
+  const oppEl = $('mp-result-opp');
+  oppEl.hidden = false;
+  oppEl.textContent = opp.won
+    ? `היריב פצח ב־${opp.guesses} ניחושים`
+    : 'היריב לא הצליח לפצח את הקוד';
+
+  // Render opponent's secret code
+  const secretPegs = $('mp-opp-secret-pegs');
+  secretPegs.innerHTML = '';
+  if (opponentSecret) {
+    for (const colorId of opponentSecret) {
+      const peg = el('div', 'peg-slot');
+      applyPegColor(peg, colorId);
+      secretPegs.appendChild(peg);
+    }
+  }
+
+  // Render my guess history
+  const myList = $('mp-my-history');
+  myList.innerHTML = '';
+  MP.history.forEach(({ guess, feedback }, i) => {
+    myList.appendChild(buildRow(i + 1, guess, feedback, { completed: true }));
+  });
+
+  $('mp-history-wrap').hidden = false;
+  showScreen('screen-result');
+}

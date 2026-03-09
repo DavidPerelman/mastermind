@@ -12,12 +12,12 @@
   <body>
     <!-- ── Home ──────────────────────────────────────────────────── -->
     <div id="screen-home" class="screen active">
-      <div class="home-dots">
-        <div class="home-dot" style="background: #e63946"></div>
-        <div class="home-dot" style="background: #f4d03f"></div>
-        <div class="home-dot" style="background: #2980b9"></div>
-        <div class="home-dot" style="background: #27ae60"></div>
-        <div class="home-dot" style="background: #e67e22"></div>
+      <div class="deco-pegs">
+        <div class="deco-peg" style="background:#e63946;box-shadow:0 0 20px #e6394670"></div>
+        <div class="deco-peg" style="background:#f4d03f;box-shadow:0 0 20px #f4d03f70"></div>
+        <div class="deco-peg" style="background:#2980b9;box-shadow:0 0 20px #2980b970"></div>
+        <div class="deco-peg" style="background:#27ae60;box-shadow:0 0 20px #27ae6070"></div>
+        <div class="deco-peg" style="background:#e67e22;box-shadow:0 0 20px #e67e2270"></div>
       </div>
       <h1 class="title">מאסטרמיינד</h1>
       <p class="subtitle">בול פגיעה</p>
@@ -33,6 +33,13 @@
         <div class="mode-btn-text">
           <span class="mode-btn-title">המחשב מנחש</span>
           <span class="mode-btn-sub">המחשב ינסה לנחש את הקוד שלך</span>
+        </div>
+      </button>
+      <button id="btn-mode-mp" class="mode-btn">
+        <span class="mode-btn-emoji">👥</span>
+        <div class="mode-btn-text">
+          <span class="mode-btn-title">שחק נגד חבר</span>
+          <span class="mode-btn-sub">משחק רשת בזמן אמת</span>
         </div>
       </button>
     </div>
@@ -136,21 +143,161 @@
       </footer>
     </div>
 
+    <!-- ── Room ────────────────────────────────────────────────────── -->
+    <div id="screen-room" class="screen">
+      <div class="room-card glass-card">
+        <button id="back-room" class="btn-back btn-back-inline">→</button>
+        <h2 class="settings-title">שחק נגד חבר</h2>
+        <div id="room-connecting" class="connecting-bar" hidden>מתחבר לשרת...</div>
+
+        <!-- Initial choice -->
+        <div id="room-choice" class="room-choice-btns">
+          <button id="btn-create-room" class="btn-primary">צור חדר חדש</button>
+          <button id="btn-join-room-show" class="btn-secondary">הצטרף לחדר קיים</button>
+        </div>
+
+        <!-- Create room form -->
+        <div id="room-create-form" hidden>
+          <p class="settings-question">רמת קושי:</p>
+          <div class="options-group">
+            <button id="mp-opt-easy"   class="option-btn selected">קל — 4 צבעים לניחוש</button>
+            <button id="mp-opt-medium" class="option-btn">בינוני — 6 צבעים לניחוש</button>
+            <button id="mp-opt-hard"   class="option-btn">קשה — 5 צבעים לניחוש</button>
+          </div>
+          <p class="settings-question">הגבלת ניחושים:</p>
+          <div class="options-group">
+            <button id="mp-limit-none"     class="option-btn selected">ללא הגבלה</button>
+            <button id="mp-limit-hard-btn" class="option-btn">הגבלה קשיחה</button>
+          </div>
+          <div id="mp-limit-count-wrap" class="limit-count-wrap" hidden>
+            <span class="fb-label">מספר ניחושים:</span>
+            <input type="number" id="mp-limit-count" class="room-input limit-input"
+                   value="10" min="1" max="99" />
+          </div>
+          <button id="btn-create-room-confirm" class="btn-primary">צור חדר</button>
+        </div>
+
+        <!-- Join room form -->
+        <div id="room-join-form" hidden>
+          <p class="settings-question">הזן קוד חדר (4 ספרות):</p>
+          <input type="text" id="room-code-input" class="room-input room-code-input"
+                 maxlength="4" inputmode="numeric" pattern="\d{4}" placeholder="_ _ _ _" />
+          <button id="btn-join-room-confirm" class="btn-primary">הצטרף</button>
+          <p id="join-error-msg" class="error-text" hidden></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Waiting ──────────────────────────────────────────────────── -->
+    <div id="screen-waiting" class="screen">
+      <div class="waiting-card glass-card">
+        <div id="waiting-code-wrap" hidden>
+          <p class="waiting-code-label">קוד החדר שלך:</p>
+          <div id="waiting-code" class="room-code-display"></div>
+        </div>
+        <p id="waiting-label" class="settings-question">ממתין...</p>
+        <div class="thinking-dots">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Multiplayer Game ─────────────────────────────────────────── -->
+    <div id="screen-mp-game" class="screen game-screen">
+      <header class="game-header">
+        <button id="back-mp-game" class="btn-back">→</button>
+        <span id="mp-turn-label" class="mp-turn-label"></span>
+        <span id="mp-opp-count" class="counter"></span>
+      </header>
+
+      <!-- Mid-game banner (won first / opponent won first) -->
+      <div id="mp-banner" class="mp-banner" hidden></div>
+
+      <div id="board-mp" class="board"></div>
+
+      <footer class="game-footer mode-b-footer">
+        <!-- Panel: my turn — pick colours and submit -->
+        <div id="mp-panel-active" hidden>
+          <div id="palette-mp" class="palette"></div>
+          <button id="btn-submit-mp" class="btn-primary" disabled>שלח ניחוש</button>
+        </div>
+
+        <!-- Panel: I submitted, waiting for opponent to give feedback -->
+        <div id="mp-panel-guessing" hidden>
+          <div class="thinking-area">
+            <span>ממתין לאישור ניקוד</span>
+            <div class="thinking-dots"><span></span><span></span><span></span></div>
+          </div>
+        </div>
+
+        <!-- Panel: opponent's turn — waiting for them to guess -->
+        <div id="mp-panel-waiting" hidden>
+          <div class="thinking-area">
+            <span>ממתין לניחוש של היריב</span>
+            <div class="thinking-dots"><span></span><span></span><span></span></div>
+          </div>
+        </div>
+
+        <!-- Panel: opponent guessed my code — I need to give feedback -->
+        <div id="mp-panel-feedback" hidden>
+          <div class="computer-guess-area">
+            <p class="guess-label">הניחוש של היריב:</p>
+            <div id="mp-opp-guess-pegs" class="code-slots" dir="ltr"></div>
+          </div>
+          <div class="player-secret-row">
+            <span class="player-secret-label">הקוד שלך:</span>
+            <div id="mp-my-secret-pegs" class="code-slots" dir="ltr"></div>
+          </div>
+          <div class="feedback-controls">
+            <div class="feedback-row-input">
+              <span class="fb-label">כמה בולים?</span>
+              <div class="stepper">
+                <button id="mp-black-minus" class="btn-step">−</button>
+                <span id="mp-black-val" class="step-val">0</span>
+                <button id="mp-black-plus" class="btn-step">+</button>
+              </div>
+            </div>
+            <div class="feedback-row-input">
+              <span class="fb-label">כמה פגיעות?</span>
+              <div class="stepper">
+                <button id="mp-white-minus" class="btn-step">−</button>
+                <span id="mp-white-val" class="step-val">0</span>
+                <button id="mp-white-plus" class="btn-step">+</button>
+              </div>
+            </div>
+            <button id="mp-btn-confirm" class="btn-primary">אשר ניקוד</button>
+          </div>
+        </div>
+      </footer>
+    </div>
+
     <!-- ── Result ──────────────────────────────────────────────────── -->
     <div id="screen-result" class="screen result-screen">
       <div class="result-card">
         <div id="result-icon" class="result-icon">🎉</div>
         <h2 id="result-title" class="result-title"></h2>
         <p id="result-subtitle" class="result-subtitle"></p>
+        <p id="mp-result-opp" class="result-opp" hidden></p>
         <div id="result-code" class="result-code" dir="ltr"></div>
         <div id="result-history-wrap" class="result-history-wrap" hidden>
           <p class="result-history-label">היסטוריית הניחושים:</p>
           <div id="result-history" class="result-history"></div>
         </div>
+        <div id="mp-history-wrap" class="mp-history-wrap" hidden>
+          <div class="mp-history-section">
+            <p class="result-history-label">הקוד הסודי של היריב:</p>
+            <div id="mp-opp-secret-pegs" class="result-code" dir="ltr"></div>
+          </div>
+          <div class="mp-history-section">
+            <p class="result-history-label">הניחושים שלי:</p>
+            <div id="mp-my-history" class="result-history mp-history-list"></div>
+          </div>
+        </div>
         <button id="btn-play-again" class="btn-primary">שחק שוב</button>
       </div>
     </div>
 
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
     <script src="ai.js"></script>
     <script src="game.js"></script>
   </body>
