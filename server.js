@@ -198,6 +198,14 @@ io.on("connection", (socket) => {
     checkGameOver(room);
   });
 
+  socket.on("chat-message", (text) => {
+    const room = findRoom(socket.id);
+    if (!room) return;
+    const idx = playerIndex(room, socket.id);
+    const name = room.names[idx] || `שחקן ${idx + 1}`;
+    io.to(room.code).emit("chat-message", { name, text, from: idx });
+  });
+
   socket.on("disconnect", () => {
     console.log("disconnect", socket.id);
     const room = findRoom(socket.id);

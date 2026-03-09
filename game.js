@@ -636,6 +636,7 @@ const MP = {
   whiteInput: 0,
   opponentHistory: [], // [{ guess, feedback }] - opponent's guesses I evaluated
   _pendingOppGuess: null, // opponent's current guess, held until I confirm feedback
+  unreadCount: 0,
 };
 
 // Room-creation form state
@@ -761,6 +762,16 @@ function connectSocket() {
     const me = MP.playerIndex === 0 ? p1 : p2;
     const opp = MP.playerIndex === 0 ? p2 : p1;
     showMpResult(me, opp, opponentSecret);
+  });
+
+  socket.on("chat-message", ({ name, text, from }) => {
+    const isMe = from === MP.playerIndex;
+    addChatMessage(name, text, isMe);
+    if ($("chat-panel").hidden) {
+      MP.unreadCount++;
+      $("chat-badge").textContent = MP.unreadCount;
+      $("chat-badge").hidden = false;
+    }
   });
 
   socket.on("opponent-disconnected", () => {
@@ -921,6 +932,10 @@ function startMpGame(firstTurn) {
     calcBoardWidth(settings.config.codeLength) + "px";
   $("mp-banner").hidden = true;
   $("mp-opp-count").textContent = "היריב ניחש 0 פעמים";
+  $("chat-messages").innerHTML = "";
+  MP.unreadCount = 0;
+  $("chat-badge").hidden = true;
+  $("chat-panel").hidden = true;
 
   renderBoardMp();
   updateMpTurnUI();
@@ -1119,6 +1134,51 @@ $("mp-btn-confirm").addEventListener("click", () => {
   hideMpPanels();
   // If I've already finished (won), just keep showing banner while opponent continues
   // Otherwise turn-change will call updateMpTurnUI
+});
+
+// ── Chat ──────────────────────────────────────────────────────
+
+function addChatMessage(name, text, isMe) {
+  const container = $("chat-messages");
+  const msg = el(
+    "div",
+    isMe ? "chat-msg chat-msg-me" : "chat-msg chat-msg-them",
+  );
+  const nameEl = el("span", "chat-msg-name");
+  nameEl.textContent = name;
+  const textEl = el("span", "chat-msg-text");
+  textEl.textContent = text;
+  msg.appendChild(nameEl);
+  msg.appendChild(textEl);
+  container.appendChild(msg);
+  container.scrollTop = container.scrollHeight;
+}
+
+function sendChatMessage() {
+  const input = $("chat-input");
+  const text = input.value.trim();
+  if (!text) return;
+  if (!socket || !socket.connected) return;
+  socket.emit("chat-message", text);
+  input.value = "";
+}
+
+$("btn-chat").addEventListener("click", () => {
+  $("chat-panel").hidden = false;
+  MP.unreadCount = 0;
+  $("chat-badge").hidden = true;
+  $("chat-messages").scrollTop = $("chat-messages").scrollHeight;
+  $("chat-input").focus();
+});
+
+$("btn-close-chat").addEventListener("click", () => {
+  $("chat-panel").hidden = true;
+});
+
+$("btn-send-chat").addEventListener("click", sendChatMessage);
+
+$("chat-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendChatMessage();
 });
 
 // ── Result ────────────────────────────────────────────────────
