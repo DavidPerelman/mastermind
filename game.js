@@ -613,7 +613,7 @@ $("btn-play-again").addEventListener("click", () => {
 const SERVER_URL =
   location.hostname === "localhost"
     ? "http://localhost:3000"
-    : "https://mastermind-game.onrender.com";
+    : "https://mastermind-6ttb.onrender.com";
 
 // Active socket (created on first MP click, destroyed on leave)
 let socket = null;
